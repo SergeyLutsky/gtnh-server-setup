@@ -54,6 +54,31 @@ GT Not Leisure includes its two default quest lines in the mod JAR. The installe
 
 All five offered mods were tested together on GTNH 2.8.4 and reached the ready state. GTNH Rates is retired: it is never offered for new installations, and the next managed update removes its previously installed JAR after creating the verified backup. Selected add-ons must also be installed on each client; the installer prints the exact client list.
 
+## Configure an existing Prism Launcher client
+
+On Windows, install the official **GTNH 2.8.4 Java 17-25** instance in Prism Launcher first. Then open PowerShell in this repository and run:
+
+```powershell
+.\setup-client.ps1 -ServerAddress "192.168.1.50:25565"
+```
+
+The script auto-detects a standard Prism Launcher instance, verifies that it is GTNH 2.8.4, and configures it to match the server. Both native Prism instances using `.minecraft` and CurseForge-managed Prism instances using `minecraft` are supported. It installs all five pinned server add-ons, BetterQuestingAPI 1.1.2, Extreme Sound Muffler: Legacy 1.1.1, and the pinned Outlined Ores Modern resource pack. The resource pack is enabled without removing existing packs.
+
+Twist Stuff's pinned GTNH 2.8.4 quest snapshot is installed into BetterQuesting `DefaultQuests` using the same quest-line directories and order file as the server. GT Not Leisure's two quest chapters are embedded in its JAR and load through the bundled BetterQuesting plus the installed BetterQuestingAPI dependency; no duplicate external GTNL quest files are copied. When the Twist Space Technology or GT Not Leisure JAR changes, the script backs up and resets the author-required generated config and `GregTech.lang` files before the next launch.
+
+Every downloaded JAR, quest archive, and resource pack is checked against its pinned size and SHA-256 in `catalog/mods.json` or `catalog/client-addons.json`. Re-running the command is safe; replaced or removed files and edited configuration are copied to `.gtnh-client-backups` inside the instance.
+
+If Prism is portable or more than one matching instance exists, identify it explicitly:
+
+```powershell
+.\setup-client.ps1 `
+  -InstancePath "D:\PrismLauncher\instances\GT New Horizons 2.8.4" `
+  -ServerAddress "play.example.net:25565" `
+  -MemoryMB 8192
+```
+
+Use `-Mods none` for a server with no optional server add-ons, or pass a quoted comma-separated subset such as `-Mods "programmable-hatches,ae2-things"`. Omit `-ServerAddress` to leave the multiplayer list unchanged. Use `-SkipMemoryConfiguration` to preserve the instance's current Prism memory settings, `-SkipClientExtras` to omit Extreme Sound Muffler and Outlined Ores, or `-SkipQuestContent` to omit the external Twist Stuff quest snapshot.
+
 ## Administration
 
 ```bash

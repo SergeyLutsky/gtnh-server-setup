@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "serverModFilePatterns": [
+    { "id": "programmable-hatches", "patterns": ["programmablehatches-*.jar"] },
+    { "id": "ae2-things", "patterns": ["ae2thing*.jar"] },
+    { "id": "twist-space-technology", "patterns": ["TwistSpaceTechnology-*.jar"] },
+    { "id": "123-technology", "patterns": ["OTHTechnology-*.jar"] },
+    { "id": "gt-not-leisure", "patterns": ["sciencenotleisure-*.jar", "bqapi-*.jar"] }
+  ],
+  "clientMods": [
+    {
+      "id": "extreme-sound-muffler-legacy",
+      "name": "Extreme Sound Muffler: Legacy",
+      "version": "1.1.1",
+      "gtnh": "2.8.4",
+      "artifact": {
+        "name": "esm-legacy-1.7.10-1.1.1.jar",
+        "url": "https://mediafilez.forgecdn.net/files/8196/169/esm-legacy-1.7.10-1.1.1.jar",
+        "sha256": "065f21b2b70cc705c49beb4bc45a9ba2230481906e12a37f93727a351495a2b5",
+        "sizeBytes": 399795
+      }
+    }
+  ],
+  "resourcePacks": [
+    {
+      "id": "outlined-ores-modern",
+      "name": "Outlined Ores Modern",
+      "version": "e3708d6b71ba388978df55db5b481b146f6d0dbe",
+      "gtnh": "2.8.4",
+      "folder": "OutlinedOres-Modern",
+      "archiveRoot": "OutlinedOres-Modern-e3708d6b71ba388978df55db5b481b146f6d0dbe",
+      "artifact": {
+        "name": "OutlinedOres-Modern-e3708d6b71ba388978df55db5b481b146f6d0dbe.zip",
+        "url": "https://github.com/Ranzuu/OutlinedOres-Modern/archive/e3708d6b71ba388978df55db5b481b146f6d0dbe.zip",
+        "sha256": "2d2fa396951be79dadc347598c05cd90d93091688b750ed6fe6c426beaba78e5",
+        "sizeBytes": 178937
+      },
+      "requiredEntries": [
+        "pack.mcmeta",
+        "pack.png",
+        "assets"
+      ]
+    }
+  ]
+}

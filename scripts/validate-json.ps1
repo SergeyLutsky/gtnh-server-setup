@@ -7,8 +7,10 @@ $ErrorActionPreference = 'Stop'
 $files = @(
     'schemas/state.schema.json',
     'schemas/mod-catalogue.schema.json',
+    'schemas/client-addons.schema.json',
     'schemas/release-checksums.schema.json',
     'catalog/mods.json',
+    'catalog/client-addons.json',
     'catalog/gtnh-release-checksums.json',
     'tests/fixtures/state-valid.json',
     'tests/fixtures/releases.json'
