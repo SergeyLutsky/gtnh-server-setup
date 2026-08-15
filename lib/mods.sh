@@ -213,18 +213,26 @@ mods_apply_update_migrations() {
 }
 
 mods_validate_post_start() {
-  local resolved="$1" service="$2" check output expected config_file helper log_file start_line deadline attempt rcon_ready
+  local resolved="$1" service="$2" check output expected config_file helper log_file start_line deadline attempt rcon_ready check_ok
   [[ "${GTNH_TEST_MODE:-false}" == true ]] && return 0
   config_file="$(system_path "/etc/${service}.conf")"
   helper="$(system_path /usr/local/bin/gtnh)"
   while IFS= read -r check; do
-    output="$(GTNH_CONFIG_FILE="$config_file" "$helper" command "$(jq -r '.command' <<<"$check")")" || return "$EX_TEMPFAIL"
-    while IFS= read -r expected; do
-      grep -F -- "$expected" <<<"$output" >/dev/null || {
-        log_error "post-start validation failed: $(jq -r '.name' <<<"$check") is missing $expected"
-        return "$EX_TEMPFAIL"
-      }
-    done < <(jq -r '.contains[]' <<<"$check")
+    check_ok=false
+    for ((attempt=1; attempt<=${GTNH_POST_START_COMMAND_ATTEMPTS:-6}; attempt++)); do
+      if output="$(GTNH_CONFIG_FILE="$config_file" "$helper" command "$(jq -r '.command' <<<"$check")" 2>/dev/null)"; then
+        check_ok=true
+        while IFS= read -r expected; do
+          if ! grep -F -- "$expected" <<<"$output" >/dev/null; then check_ok=false; break; fi
+        done < <(jq -r '.contains[]' <<<"$check")
+        [[ "$check_ok" == true ]] && break
+      fi
+      sleep "${GTNH_POST_START_COMMAND_RETRY_SECONDS:-5}"
+    done
+    if [[ "$check_ok" != true ]]; then
+      log_error "post-start validation failed: $(jq -r '.name' <<<"$check") did not return all required evidence"
+      return "$EX_TEMPFAIL"
+    fi
   done < <(jq -c '.[] | .postStartChecks[]?' <<<"$resolved")
 
   # Some long BetterQuesting admin commands complete successfully but close

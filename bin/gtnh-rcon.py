@@ -6,17 +6,24 @@ def packet(request_id, kind, payload):
     body = struct.pack("<ii", request_id, kind) + payload.encode() + b"\0\0"
     return struct.pack("<i", len(body)) + body
 
-def receive(sock):
-    size_raw = sock.recv(4)
-    if len(size_raw) != 4:
-        raise RuntimeError("short RCON response")
-    size = struct.unpack("<i", size_raw)[0]
-    data = b""
+def receive_exact(sock, size):
+    data = bytearray()
     while len(data) < size:
         chunk = sock.recv(size - len(data))
         if not chunk:
             raise RuntimeError("closed RCON connection")
-        data += chunk
+        data.extend(chunk)
+    return bytes(data)
+
+def receive(sock):
+    # TCP is a byte stream: even a four-byte header may arrive in multiple
+    # recv() calls. Treating fragmentation as a failed response made otherwise
+    # healthy post-start checks intermittently roll back.
+    size_raw = receive_exact(sock, 4)
+    size = struct.unpack("<i", size_raw)[0]
+    if size < 10 or size > 4110:
+        raise RuntimeError("invalid RCON response size")
+    data = receive_exact(sock, size)
     request_id, kind = struct.unpack("<ii", data[:8])
     return request_id, kind, data[8:-2].decode(errors="replace")
 
