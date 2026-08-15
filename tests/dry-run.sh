@@ -12,6 +12,8 @@ snapshot() {
 }
 
 before="$(snapshot)"
+dry_run_install="${TMPDIR:-/tmp}/gtnh-dry-run-install-$$"
+dry_run_backups="${TMPDIR:-/tmp}/gtnh-dry-run-backups-$$"
 
 export GTNH_TEST_OS_RELEASE=$'ID=ubuntu\nVERSION_ID="24.04"'
 export GTNH_TEST_MEMINFO='MemTotal:       33554432 kB'
@@ -24,7 +26,8 @@ export GTNH_TEST_EUID=0
 export GTNH_TEST_UNAME=x86_64
 
 bash "$ROOT/install.sh" --dry-run --plain --yes --action install --channel stable \
-  --release-metadata "$ROOT/tests/fixtures/releases.json" --admin TestAdmin >/dev/null
+  --release-metadata "$ROOT/tests/fixtures/releases.json" --admin TestAdmin \
+  --install-path "$dry_run_install" --backup-path "$dry_run_backups" >/dev/null
 
 after="$(snapshot)"
 if [[ "$before" != "$after" ]]; then

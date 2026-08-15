@@ -198,7 +198,7 @@ No remote VM testing begins until all local tests pass and the exact remote targ
 1. One-line GitHub launch and dry run.
 2. Clean stable install with no optional mods.
 3. Re-run/idempotency check.
-4. Selected six-mod compatible installation.
+4. Selected offered-mod compatible installation and retired-mod removal.
 5. Forward stable or RC update.
 6. Optional-mod update and unmanaged-mod preservation.
 7. Forced bad JAR/config startup failure and automatic rollback.

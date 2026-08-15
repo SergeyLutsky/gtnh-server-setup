@@ -42,7 +42,6 @@ Offline mode does not authenticate usernames. Another user who can reach the ser
 
 ## Optional mods pinned for GTNH 2.8.4
 
-- GTNH Rates 1.11.0-2.8.4
 - Programmable Hatches 0.1.3p53
 - AE2 Things 1.2.14
 - Twist Space Technology 0.7.16
@@ -53,7 +52,7 @@ Artifacts and exact SHA-256 hashes are kept in `catalog/mods.json`. Selecting Tw
 
 GT Not Leisure includes its two default quest lines in the mod JAR. The installer verifies those resources and GTNH 2.8.4's compatible BetterQuesting, automatically installs the separately pinned BetterQuestingAPI 1.1.2, and requires both quest chapters to appear in the live API before declaring startup healthy. After creating the pre-update backup, version updates also perform each author's required generated-file resets: `GregTech.lang` plus the current or legacy GT Not Leisure configuration for GT Not Leisure, and `GregTech.lang` plus `TwistSpaceTechnology.cfg` for Twist Space Technology. Same-version reconciliation preserves these files.
 
-All six mods were tested together on GTNH 2.8.4 and reached the ready state. Selected add-ons must also be installed on each client; the installer prints the exact client list.
+All five offered mods were tested together on GTNH 2.8.4 and reached the ready state. GTNH Rates is retired: it is never offered for new installations, and the next managed update removes its previously installed JAR after creating the verified backup. Selected add-ons must also be installed on each client; the installer prints the exact client list.
 
 ## Administration
 

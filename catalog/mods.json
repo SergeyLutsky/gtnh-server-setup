@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
-  "mods": [
+  "retiredMods": [
     {
-      "id": "gtnh-rates", "name": "GTNH Rates", "repository": "https://github.com/Sladki/GTNHRates", "clientRequired": true,
-      "dependencies": [], "conflicts": [],
-      "releases": [{"gtnh":"2.8.4","version":"1.11.0-2.8.4","asset":"gtnhrates-1.11.0-2.8.4.jar","url":"https://github.com/Sladki/GTNHRates/releases/download/1.11.0-2.8.4/gtnhrates-1.11.0-2.8.4.jar","sha256":"6175f3ac08727cf3962507d7c425e178353839b15fb7b6ad42fe60fb7c1da69c","sizeBytes":110714}]
-    },
+      "id": "gtnh-rates",
+      "artifacts": ["gtnhrates-1.11.0-2.8.4.jar"]
+    }
+  ],
+  "mods": [
     {
       "id": "programmable-hatches", "name": "Programmable Hatches", "repository": "https://github.com/reobf/Programmable-Hatches-Mod", "clientRequired": true,
       "dependencies": [], "conflicts": [],

@@ -391,8 +391,8 @@ These do not require new product decisions, but must be resolved and documented 
 - Safe heap recommendation formula.
 - Exact positive startup marker and timeout for each supported GTNH line.
 - Exact ServerUtilities rank/permission enablement needed for configured limits.
-- Exact release asset, filename, checksum, side requirement, dependency graph, config surface, and compatibility mapping for all six initial mods.
-- Compatibility of the six-mod combinations for each supported GTNH release.
+- Exact release asset, filename, checksum, side requirement, dependency graph, config surface, and compatibility mapping for all offered mods, plus exact-artifact migrations for retired mods.
+- Compatibility of the offered mod combinations for each supported GTNH release.
 - Version-specific config syntax changes and migration rules.
 - Package dependencies required for Whiptail, archive handling, JSON parsing, RCON, and checksums.
 

@@ -152,10 +152,12 @@ assert_eq "12288" "$(heap_recommended_mib 32768)" "heap recommendation is capped
 assert_failure "insufficient host RAM has no unsafe heap default" heap_recommended_mib 4096
 
 mod_catalogue="$(mod_catalogue_load)"
-assert_success "six-mod catalogue validates" mod_catalogue_validate "$mod_catalogue"
+assert_success "five-mod catalogue with retired-mod migration validates" mod_catalogue_validate "$mod_catalogue"
 all_mods="$(mod_resolve "$mod_catalogue" 2.8.4 all)"
-assert_eq "6" "$(jq length <<<"$all_mods")" "all six mods resolve for GTNH 2.8.4"
-assert_eq "6" "$(jq '[.[].artifact.sha256]|unique|length' <<<"$all_mods")" "mod artifacts have unique pinned checksums"
+assert_eq "5" "$(jq length <<<"$all_mods")" "all five offered mods resolve for GTNH 2.8.4"
+assert_eq "5" "$(jq '[.[].artifact.sha256]|unique|length' <<<"$all_mods")" "mod artifacts have unique pinned checksums"
+assert_eq "0" "$(jq '[.[]|select(.id=="gtnh-rates")]|length' <<<"$all_mods")" "GTNH Rates is never offered for installation"
+assert_eq '["gtnhrates-1.11.0-2.8.4.jar"]' "$(jq -c '.retiredMods[]|select(.id=="gtnh-rates")|.artifacts' <<<"$mod_catalogue")" "GTNH Rates has an exact retirement artifact"
 gtnl="$(jq -c '.[]|select(.id=="gt-not-leisure")' <<<"$all_mods")"
 tst="$(jq -c '.[]|select(.id=="twist-space-technology")' <<<"$all_mods")"
 assert_eq "0.2.6-hotfix1" "$(jq -r .version <<<"$gtnl")" "GT Not Leisure uses the compatible 0.2.6 hotfix"
@@ -166,12 +168,23 @@ assert_eq "2.8.4-20260323" "$(jq -r '.contentPacks[0].version' <<<"$tst")" "Twis
 assert_eq "Reloaded default quest database" "$(jq -r '.postStartLogChecks[0].logContains' <<<"$tst")" "Twist Stuff verifies BetterQuesting's automatic startup load"
 malformed_content_catalogue="$(jq '.mods[] |= if .id=="twist-space-technology" then .releases[0].contentPacks[0].target="../../outside" else . end' <<<"$mod_catalogue")"
 assert_failure "unsafe quest content target fails catalogue validation" mod_catalogue_validate "$malformed_content_catalogue"
+malformed_retired_catalogue="$(jq '.retiredMods[0].artifacts=["../gtnhrates.jar"]' <<<"$mod_catalogue")"
+assert_failure "unsafe retired mod artifact fails catalogue validation" mod_catalogue_validate "$malformed_retired_catalogue"
 assert_failure "unknown mod fails closed" mod_resolve "$mod_catalogue" 2.8.4 does-not-exist
 UI_MODE=plain
-assert_eq "gtnh-rates,ae2-things" "$(printf '1,3\n' | ui_mod_selector "$mod_catalogue" 2.8.4 '')" "plain mod checklist maps numbered choices"
-assert_eq "gtnh-rates,ae2-things" "$(printf '\n' | ui_mod_selector "$mod_catalogue" 2.8.4 'gtnh-rates,ae2-things')" "update mod checklist keeps installed defaults"
+assert_eq "programmable-hatches,twist-space-technology" "$(printf '1,3\n' | ui_mod_selector "$mod_catalogue" 2.8.4 '')" "plain mod checklist maps numbered choices"
+assert_eq "programmable-hatches,ae2-things" "$(printf '\n' | ui_mod_selector "$mod_catalogue" 2.8.4 'gtnh-rates,programmable-hatches,ae2-things')" "update mod checklist excludes retired installed defaults"
 
 mod_validation_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtnh-mod-validation.XXXXXX")"
+mkdir -p "$mod_validation_dir/retired/mods"
+printf retired >"$mod_validation_dir/retired/mods/gtnhrates-1.11.0-2.8.4.jar"
+printf keep >"$mod_validation_dir/retired/mods/unmanaged.jar"
+assert_success "retired mod migration succeeds" mods_remove_retired "$mod_catalogue" "$mod_validation_dir/retired"
+if [[ ! -e "$mod_validation_dir/retired/mods/gtnhrates-1.11.0-2.8.4.jar" && -e "$mod_validation_dir/retired/mods/unmanaged.jar" ]]; then
+  pass "retired mod migration removes only the exact managed JAR"
+else
+  fail "retired mod migration removes only the exact managed JAR"
+fi
 mkdir -p "$mod_validation_dir/build/betterquesting/api/api" \
   "$mod_validation_dir/build/assets/sciencenotleisure/quest/QuestLines/Tier075Superheat-GTNotLeisure75SteamAge==" \
   "$mod_validation_dir/build/assets/sciencenotleisure/quest/QuestLines/Tier0999Supercri-GTNotLeisure99SteamAge=="

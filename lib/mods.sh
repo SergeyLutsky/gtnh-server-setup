@@ -7,7 +7,15 @@ mod_catalogue_load() {
 
 mod_catalogue_validate() {
   jq -e '
-    .schemaVersion==1 and (.mods|type=="array") and all(.mods[];
+    .schemaVersion==1 and
+    (.retiredMods // [] | type=="array" and all(.[];
+      (.id|type=="string" and test("^[a-z0-9][a-z0-9-]*$")) and
+      (.artifacts|type=="array" and length>0 and all(.[];
+        type=="string" and test("^[A-Za-z0-9._+()-]+\\.jar$"))))) and
+    (([.retiredMods[]?.id]|length) == ([.retiredMods[]?.id]|unique|length)) and
+    (([.mods[].id]|length) == ([.mods[].id]|unique|length)) and
+    ((([.retiredMods[]?.id] - [.mods[].id])|length) == ([.retiredMods[]?.id]|length)) and
+    (.mods|type=="array") and all(.mods[];
       (.id|type=="string") and (.releases|type=="array") and all(.releases[];
         (.artifactEntries // [] | all(.[]; type=="string" and length>0)) and
         (.runtimeRequirements // [] | all(.[];
@@ -45,6 +53,17 @@ mod_catalogue_validate() {
           type=="string" and test("^config/[A-Za-z0-9._/-]+$") and
           (contains("..")|not)))))
   ' >/dev/null <<<"$1"
+}
+
+mods_remove_retired() {
+  local catalogue="$1" stage="$2" artifact
+  while IFS= read -r artifact; do
+    [[ "$artifact" =~ ^[A-Za-z0-9._+()-]+\.jar$ ]] || return "$EX_DATAERR"
+    if [[ -f "$stage/mods/$artifact" ]]; then
+      rm -f -- "$stage/mods/$artifact"
+      log_info "removed retired optional mod artifact: $artifact"
+    fi
+  done < <(jq -r '.retiredMods[]?.artifacts[]' <<<"$catalogue")
 }
 
 mod_resolve() {

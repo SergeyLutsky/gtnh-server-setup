@@ -258,11 +258,11 @@ execute_change() {
     if [[ "$(jq -r .gtnh.version <<<"$old_state")" == "$version" && "$(jq -c '[.mods[].id]|sort' <<<"$old_state")" == "$(jq -c '[.[].id]|sort' <<<"$RESOLVED_MODS_JSON")" ]]; then
       log_info "Requested release and mod set already installed; configuration will be reconciled"
     fi
-    # On Update, an installed catalogue mod that is not selected remains
-    # installed. Removal is deliberately not overloaded onto the update menu.
-    final_mods_json="$(jq -cn --argjson old "$(jq .mods <<<"$old_state")" --argjson selected "$RESOLVED_MODS_JSON" '
+    # On Update, an installed active catalogue mod that is not selected remains
+    # installed. Explicitly retired catalogue mods are removed after backup.
+    final_mods_json="$(jq -cn --argjson old "$(jq .mods <<<"$old_state")" --argjson selected "$RESOLVED_MODS_JSON" --argjson retired "$(jq '[.retiredMods[]?.id]' <<<"$MOD_CATALOGUE_JSON")" '
       ($selected|map(.id)) as $ids |
-      ($old|map(. as $m | select(($ids|index($m.id)) == null))) + $selected
+      ($old|map(. as $m | select(($ids|index($m.id)) == null and ($retired|index($m.id)) == null))) + $selected
     ')"
   fi
 
@@ -284,6 +284,11 @@ execute_change() {
       [[ "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
       rm -rf -- "$stage"
       die "$EX_IOERR" "could not carry the existing world and configuration into staging"
+    }
+    mods_remove_retired "$MOD_CATALOGUE_JSON" "$stage" || {
+      [[ "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
+      rm -rf -- "$stage"
+      die "$EX_DATAERR" "retired optional-mod removal failed"
     }
     while IFS= read -r old; do rm -f -- "$stage/mods/$(basename -- "$old")"; done < <(
       jq -r --argjson selected "$RESOLVED_MODS_JSON" '

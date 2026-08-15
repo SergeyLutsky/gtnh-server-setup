@@ -85,6 +85,10 @@ ui_confirm_plan() {
 ui_mod_selector() {
   local catalogue="$1" gtnh="$2" installed_csv="${3:-}" row id name version default choice output="" index=0
   local -a rows=() args=()
+  installed_csv="$(jq -r --arg installed "$installed_csv" '
+    ($installed|split(",")) as $ids |
+    [.mods[].id as $id | select(($ids|index($id)) != null) | $id] | join(",")
+  ' <<<"$catalogue")"
   mapfile -t rows < <(jq -c '.mods[]' <<<"$catalogue")
   if [[ "$UI_MODE" == whiptail ]]; then
     for row in "${rows[@]}"; do
