@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/SergeyLutsky/gtnh-server-setup/schemas/release-checksums.schema.json",
+  "title": "Project-pinned GTNH server pack checksums",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "artifacts"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "name", "sha256", "sizeBytes", "verifiedAt"],
+        "properties": {
+          "version": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "sizeBytes": { "type": "integer", "minimum": 1 },
+          "verifiedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

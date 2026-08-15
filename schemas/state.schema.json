@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/SergeyLutsky/gtnh-server-setup/schemas/state.schema.json",
+  "title": "GTNH managed installation state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "managedBy", "installation", "gtnh", "mods", "operation", "updatedAt"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "managedBy": { "const": "gtnh-server-setup" },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "backupPath", "serviceName"],
+      "properties": {
+        "path": { "$ref": "#/$defs/absolutePath" },
+        "backupPath": { "$ref": "#/$defs/absolutePath" },
+        "serviceName": { "const": "gtnh.service" }
+      }
+    },
+    "gtnh": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "channel", "artifact", "java"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[Rr][Cc]-?[0-9]+)?$" },
+        "channel": { "enum": ["stable", "rc"] },
+        "artifact": { "$ref": "#/$defs/artifact" },
+        "java": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["major", "package", "version"],
+          "properties": {
+            "major": { "type": "integer", "enum": [17, 21] },
+            "package": { "type": "string", "pattern": "^openjdk-(17|21)-jre-headless$" },
+            "version": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "mods": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version", "artifact"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "version": { "type": "string", "minLength": 1 },
+          "artifact": { "$ref": "#/$defs/artifact" }
+        }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "stage", "backupAvailable", "startedAt"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+        "status": { "enum": ["none", "in_progress", "rollback_required", "complete"] },
+        "stage": { "enum": ["planned", "download", "verify", "stage", "switch", "configure", "health-check", "complete"] },
+        "backupAvailable": { "type": "boolean" },
+        "startedAt": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "updatedAt": { "$ref": "#/$defs/timestamp" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "absolutePath": { "type": "string", "pattern": "^/(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "url", "sha256", "sizeBytes"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "sizeBytes": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

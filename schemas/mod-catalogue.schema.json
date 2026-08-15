@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/SergeyLutsky/gtnh-server-setup/schemas/mod-catalogue.schema.json",
+  "title": "GTNH optional mod catalogue",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "mods"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "mods": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/mod" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "mod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "repository", "clientRequired", "releases"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "repository": { "type": "string", "format": "uri", "pattern": "^https://github.com/" },
+        "clientRequired": { "type": "boolean" },
+        "dependencies": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+        "conflicts": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+        "releases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["gtnh", "version", "asset", "sha256"],
+            "properties": {
+              "gtnh": { "type": "string", "minLength": 1 },
+              "version": { "type": "string", "minLength": 1 },
+              "asset": { "type": "string", "minLength": 1 },
+              "sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

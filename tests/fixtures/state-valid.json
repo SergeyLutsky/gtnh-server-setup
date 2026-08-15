@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "managedBy": "gtnh-server-setup",
+  "installation": {
+    "path": "/opt/gtnh",
+    "backupPath": "/var/backups/gtnh",
+    "serviceName": "gtnh.service"
+  },
+  "gtnh": {
+    "version": "2.8.4",
+    "channel": "stable",
+    "artifact": {
+      "name": "GT_New_Horizons_2.8.4_Server_Java_17-25.zip",
+      "url": "https://downloads.gtnewhorizons.com/ServerPacks/GT_New_Horizons_2.8.4_Server_Java_17-25.zip",
+      "sha256": "a58d771a07dd707535df01519085755398296c1e91383612d2d32ff36990c08c",
+      "sizeBytes": 441093161
+    },
+    "java": {
+      "major": 21,
+      "package": "openjdk-21-jre-headless",
+      "version": "21.0.8"
+    }
+  },
+  "mods": [],
+  "operation": {
+    "id": "install-20260815T120000Z",
+    "status": "complete",
+    "stage": "complete",
+    "backupAvailable": false,
+    "startedAt": "2026-08-15T12:00:00Z"
+  },
+  "updatedAt": "2026-08-15T12:30:00Z"
+}

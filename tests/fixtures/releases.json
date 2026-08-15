@@ -1,0 +1,38 @@
+{
+  "2.9.0-nightly-2026-07-29": {
+    "title": "Nightly release",
+    "releaseDate": "2026/07/29",
+    "maxJavaVersion": 25,
+    "server": { "java17_2XUrl": "https://downloads.gtnewhorizons.com/ServerPacks/nightlies/GT_New_Horizons_2.9.0-nightly-2026-07-29_Server_Java_17-25.zip" }
+  },
+  "2.9.0-beta-2": {
+    "title": "Beta release",
+    "releaseDate": "2026/07/05",
+    "maxJavaVersion": 25,
+    "server": { "java17_2XUrl": "https://downloads.gtnewhorizons.com/ServerPacks/betas/GT_New_Horizons_2.9.0-beta-2_Server_Java_17-25.zip" }
+  },
+  "2.8.4": {
+    "title": "Stable release",
+    "releaseDate": "2025/12/23",
+    "maxJavaVersion": 25,
+    "server": { "java17_2XUrl": "https://downloads.gtnewhorizons.com/ServerPacks/GT_New_Horizons_2.8.4_Server_Java_17-25.zip" }
+  },
+  "2.8.0-rc-2": {
+    "title": "Beta release",
+    "releaseDate": "2025/09/25",
+    "maxJavaVersion": 25,
+    "server": { "java17_2XUrl": "https://downloads.gtnewhorizons.com/ServerPacks/betas/GT_New_Horizons_2.8.0-rc-2_Server_Java_17-25.zip" }
+  },
+  "2.8.0-rc-1": {
+    "title": "Beta release",
+    "releaseDate": "2025/09/21",
+    "maxJavaVersion": 24,
+    "server": { "java17_2XUrl": "https://downloads.gtnewhorizons.com/ServerPacks/betas/GT_New_Horizons_2.8.0-rc-1_Server_Java_17-24.zip" }
+  },
+  "2.7.4": {
+    "title": "Stable release",
+    "releaseDate": "2025/04/13",
+    "maxJavaVersion": 21,
+    "server": { "java17_2XUrl": "https://downloads.gtnewhorizons.com/ServerPacks/GT_New_Horizons_2.7.4_Server_Java_17-21.zip" }
+  }
+}

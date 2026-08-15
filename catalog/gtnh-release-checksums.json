@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "artifacts": [
+    {
+      "version": "2.8.4",
+      "name": "GT_New_Horizons_2.8.4_Server_Java_17-25.zip",
+      "sha256": "a58d771a07dd707535df01519085755398296c1e91383612d2d32ff36990c08c",
+      "sizeBytes": 441093161,
+      "verifiedAt": "2026-08-15T11:36:00Z"
+    },
+    {
+      "version": "2.8.0-rc-2",
+      "name": "GT_New_Horizons_2.8.0-rc-2_Server_Java_17-25.zip",
+      "sha256": "ee562a219ccd4268de590a169ae0a09c43647d9cfa8f61beaf62faa2f70c7971",
+      "sizeBytes": 443995454,
+      "verifiedAt": "2026-08-15T11:36:00Z"
+    }
+  ]
+}
