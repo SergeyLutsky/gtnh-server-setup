@@ -39,7 +39,7 @@ mod_catalogue_validate() {
           (.contains|type=="array" and length>0 and all(.[]; type=="string" and length>0)))) and
         (.postStartLogChecks // [] | all(.[];
           (.name|type=="string" and length>0) and
-          (.command|type=="string" and test("^[A-Za-z0-9._ -]+$")) and
+          (.command // "" | if length==0 then true else type=="string" and test("^[A-Za-z0-9._ -]+$") end) and
           (.logContains|type=="string" and length>0))) and
         (.updateResetPaths // [] | all(.[];
           type=="string" and test("^config/[A-Za-z0-9._/-]+$") and
@@ -213,39 +213,25 @@ mods_apply_update_migrations() {
 }
 
 mods_validate_post_start() {
-  local resolved="$1" service="$2" check output expected config_file helper log_file start_line deadline attempt rcon_ready check_ok
+  local resolved="$1" service="$2" check output expected command config_file helper log_file start_line deadline attempt rcon_ready check_ok
   [[ "${GTNH_TEST_MODE:-false}" == true ]] && return 0
   config_file="$(system_path "/etc/${service}.conf")"
   helper="$(system_path /usr/local/bin/gtnh)"
-  while IFS= read -r check; do
-    check_ok=false
-    for ((attempt=1; attempt<=${GTNH_POST_START_COMMAND_ATTEMPTS:-6}; attempt++)); do
-      if output="$(GTNH_CONFIG_FILE="$config_file" "$helper" command "$(jq -r '.command' <<<"$check")" 2>/dev/null)"; then
-        check_ok=true
-        while IFS= read -r expected; do
-          if ! grep -F -- "$expected" <<<"$output" >/dev/null; then check_ok=false; break; fi
-        done < <(jq -r '.contains[]' <<<"$check")
-        [[ "$check_ok" == true ]] && break
-      fi
-      sleep "${GTNH_POST_START_COMMAND_RETRY_SECONDS:-5}"
-    done
-    if [[ "$check_ok" != true ]]; then
-      log_error "post-start validation failed: $(jq -r '.name' <<<"$check") did not return all required evidence"
-      return "$EX_TEMPFAIL"
-    fi
-  done < <(jq -c '.[] | .postStartChecks[]?' <<<"$resolved")
-
-  # Some long BetterQuesting admin commands complete successfully but close
-  # their RCON response. Prove those actions from a fresh log marker, then
-  # require a new RCON connection so a stale marker cannot pass the check.
+  # BetterQuesting automatically loads DefaultQuests during server startup.
+  # Wait for that marker before API checks so they inspect the final database.
+  # Optional commands support content installed into an already-running server.
   # shellcheck disable=SC1090
   source "$config_file"
   log_file="$GTNH_INSTALL_PATH/logs/latest.log"
   while IFS= read -r check; do
     [[ -f "$log_file" ]] || return "$EX_NOINPUT"
-    start_line="$(wc -l <"$log_file")"
-    GTNH_CONFIG_FILE="$config_file" "$helper" command "$(jq -r '.command' <<<"$check")" >/dev/null 2>&1 || true
-    deadline=$((SECONDS + ${GTNH_POST_START_LOG_TIMEOUT:-60}))
+    command="$(jq -r '.command // ""' <<<"$check")"
+    start_line=0
+    if [[ -n "$command" ]]; then
+      start_line="$(wc -l <"$log_file")"
+      GTNH_CONFIG_FILE="$config_file" "$helper" command "$command" >/dev/null 2>&1 || true
+    fi
+    deadline=$((SECONDS + ${GTNH_POST_START_LOG_TIMEOUT:-120}))
     while ((SECONDS < deadline)); do
       if tail -n "+$((start_line + 1))" "$log_file" | grep -F -- "$(jq -r '.logContains' <<<"$check")" >/dev/null; then break; fi
       sleep 1
@@ -264,4 +250,22 @@ mods_validate_post_start() {
       return "$EX_TEMPFAIL"
     fi
   done < <(jq -c '.[] | .postStartLogChecks[]?' <<<"$resolved")
+
+  while IFS= read -r check; do
+    check_ok=false
+    for ((attempt=1; attempt<=${GTNH_POST_START_COMMAND_ATTEMPTS:-6}; attempt++)); do
+      if output="$(GTNH_CONFIG_FILE="$config_file" "$helper" command "$(jq -r '.command' <<<"$check")" 2>/dev/null)"; then
+        check_ok=true
+        while IFS= read -r expected; do
+          if ! grep -F -- "$expected" <<<"$output" >/dev/null; then check_ok=false; break; fi
+        done < <(jq -r '.contains[]' <<<"$check")
+        [[ "$check_ok" == true ]] && break
+      fi
+      sleep "${GTNH_POST_START_COMMAND_RETRY_SECONDS:-5}"
+    done
+    if [[ "$check_ok" != true ]]; then
+      log_error "post-start validation failed: $(jq -r '.name' <<<"$check") did not return all required evidence"
+      return "$EX_TEMPFAIL"
+    fi
+  done < <(jq -c '.[] | .postStartChecks[]?' <<<"$resolved")
 }

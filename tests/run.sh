@@ -163,7 +163,7 @@ assert_eq "2" "$(jq '[.artifactEntries[]|select(contains("SteamAge"))]|length' <
 assert_eq "2" "$(jq '.[0].contains|length' <<<"$(jq -c '.postStartChecks' <<<"$gtnl")")" "GT Not Leisure has post-start checks for both quest lines"
 assert_eq '["config/GregTech/GregTech.lang","config/TwistSpaceTechnology.cfg"]' "$(jq -c '.updateResetPaths' <<<"$tst")" "Twist Space Technology pins its documented update resets"
 assert_eq "2.8.4-20260323" "$(jq -r '.contentPacks[0].version' <<<"$tst")" "Twist Space Technology pins the pre-2.9 Twist Stuff snapshot"
-assert_eq "bq_admin default load" "$(jq -r '.postStartLogChecks[0].command' <<<"$tst")" "Twist Stuff reloads the live default quest database"
+assert_eq "Reloaded default quest database" "$(jq -r '.postStartLogChecks[0].logContains' <<<"$tst")" "Twist Stuff verifies BetterQuesting's automatic startup load"
 malformed_content_catalogue="$(jq '.mods[] |= if .id=="twist-space-technology" then .releases[0].contentPacks[0].target="../../outside" else . end' <<<"$mod_catalogue")"
 assert_failure "unsafe quest content target fails catalogue validation" mod_catalogue_validate "$malformed_content_catalogue"
 assert_failure "unknown mod fails closed" mod_resolve "$mod_catalogue" 2.8.4 does-not-exist
@@ -274,6 +274,11 @@ printf '0\n' >"$GTNH_TEST_RCON_COUNTER"
 printf '0\n' >"$GTNH_TEST_COMMAND_COUNTER"
 log_check_resolved='[{"postStartChecks":[{"name":"API registration","command":"bqapi list","contains":["GTNotLeisure75SteamAge"]}],"postStartLogChecks":[{"name":"quest reload","command":"bq_admin default load","logContains":"Reloaded default quest database"}]}]'
 log_only_resolved='[{"postStartChecks":[],"postStartLogChecks":[{"name":"quest reload","command":"bq_admin default load","logContains":"Reloaded default quest database"}]}]'
+startup_log_resolved='[{"postStartChecks":[],"postStartLogChecks":[{"name":"startup quest load","logContains":"Reloaded default quest database"}]}]'
+printf '%s\n' 'Reloaded default quest database' >"$GTNH_TEST_LOG_FILE"
+assert_success "quest content accepts BetterQuesting automatic startup-load evidence" mods_validate_post_start "$startup_log_resolved" gtnh
+: >"$GTNH_TEST_LOG_FILE"
+printf '0\n' >"$GTNH_TEST_RCON_COUNTER"
 assert_success "quest reload accepts fresh log evidence and waits for RCON recovery" mods_validate_post_start "$log_check_resolved" gtnh
 printf '%s\n' '#!/usr/bin/env bash' '[[ "$*" == "command list" ]]' >"$post_start_dir/system/usr/local/bin/gtnh"
 chmod 0755 "$post_start_dir/system/usr/local/bin/gtnh"

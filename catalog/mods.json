@@ -56,7 +56,6 @@
         }],
         "postStartLogChecks":[{
           "name":"Twist Stuff quest database load",
-          "command":"bq_admin default load",
           "logContains":"Reloaded default quest database"
         }]
       }]
