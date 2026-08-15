@@ -81,3 +81,37 @@ ui_confirm_plan() {
   read -r -p "$message Continue? [y/N]: " answer || return 1
   [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]]
 }
+
+ui_mod_selector() {
+  local catalogue="$1" gtnh="$2" installed_csv="${3:-}" row id name version default choice output="" index=0
+  local -a rows=() args=()
+  mapfile -t rows < <(jq -c '.mods[]' <<<"$catalogue")
+  if [[ "$UI_MODE" == whiptail ]]; then
+    for row in "${rows[@]}"; do
+      id="$(jq -r .id <<<"$row")"; name="$(jq -r .name <<<"$row")"
+      version="$(jq -r --arg g "$gtnh" 'first(.releases[]|select(.gtnh==$g)|.version)//"incompatible"' <<<"$row")"
+      default=OFF; [[ ",$installed_csv," == *",$id,"* ]] && default=ON
+      args+=("$id" "$name ($version)" "$default")
+    done
+    choice="$(whiptail --title 'Optional GTNH mods' --checklist 'Space selects. No mods are selected on a clean install.' 22 78 12 "${args[@]}" 3>&1 1>&2 2>&3)" || return "$EX_CANCELLED"
+    choice="${choice//\"/}"; choice="${choice// /,}"
+    printf '%s\n' "${choice:-none}"
+    return
+  fi
+  printf '\nOptional mods (comma-separated numbers; blank keeps defaults)\n' >&2
+  for row in "${rows[@]}"; do
+    index=$((index+1)); id="$(jq -r .id <<<"$row")"; name="$(jq -r .name <<<"$row")"
+    version="$(jq -r --arg g "$gtnh" 'first(.releases[]|select(.gtnh==$g)|.version)//"incompatible"' <<<"$row")"
+    default=' '; [[ ",$installed_csv," == *",$id,"* ]] && default=x
+    printf '  %d) [%s] %s (%s)\n' "$index" "$default" "$name" "$version" >&2
+  done
+  read -r -p 'Selection: ' choice || return "$EX_CANCELLED"
+  if [[ -z "$choice" ]]; then printf '%s\n' "${installed_csv:-none}"; return; fi
+  IFS=, read -ra selected <<<"$choice"
+  for index in "${selected[@]}"; do
+    [[ "$index" =~ ^[0-9]+$ ]] && ((index>=1 && index<=${#rows[@]})) || return "$EX_USAGE"
+    id="$(jq -r .id <<<"${rows[index-1]}")"
+    output="${output:+$output,}$id"
+  done
+  printf '%s\n' "${output:-none}"
+}

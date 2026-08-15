@@ -1,0 +1,5 @@
+*.sh text eol=lf
+bin/gtnh text eol=lf
+bin/gtnh-rcon-firewall text eol=lf
+bin/*.py text eol=lf
+*.json text eol=lf

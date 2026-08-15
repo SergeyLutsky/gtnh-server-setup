@@ -21,6 +21,16 @@ source "$TEST_ROOT/lib/releases.sh"
 source "$TEST_ROOT/lib/java.sh"
 # shellcheck source=/dev/null
 source "$TEST_ROOT/lib/state.sh"
+# shellcheck source=/dev/null
+source "$TEST_ROOT/lib/packages.sh"
+# shellcheck source=/dev/null
+source "$TEST_ROOT/lib/config.sh"
+# shellcheck source=/dev/null
+source "$TEST_ROOT/lib/mods.sh"
+# shellcheck source=/dev/null
+source "$TEST_ROOT/lib/lifecycle.sh"
+# shellcheck source=/dev/null
+source "$TEST_ROOT/lib/backup.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0

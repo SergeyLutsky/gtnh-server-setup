@@ -99,7 +99,7 @@ assert_eq "manual-recovery" "$(operation_recovery_class in_progress switch false
 
 secret_log="$(mktemp "${TMPDIR:-/tmp}/gtnh-log-test.XXXXXX")"
 LOG_FILE="$secret_log"
-secret_value='L197350S-test-only'
+secret_value='private-test-value-9f6a2d'
 log_register_secret "$secret_value"
 log_info "password=hunter2 token=ghp_abcdefghijklmnopqrstuvwxyz secret=$secret_value Authorization: Bearer abcdef"
 if grep -Fq 'hunter2' "$secret_log" || grep -Fq 'ghp_abcdefghijklmnopqrstuvwxyz' "$secret_log" || grep -Fq "$secret_value" "$secret_log" || grep -Fq 'Bearer abcdef' "$secret_log"; then
@@ -123,5 +123,56 @@ else
   pass "failed download removes partial artifacts"
 fi
 rm -rf -- "$download_destination"
+
+assert_eq "6144" "$(heap_recommended_mib 8192)" "heap reserves memory on an 8 GiB host"
+assert_eq "12288" "$(heap_recommended_mib 32768)" "heap recommendation is capped at 12 GiB"
+assert_failure "insufficient host RAM has no unsafe heap default" heap_recommended_mib 4096
+
+mod_catalogue="$(mod_catalogue_load)"
+assert_success "six-mod catalogue validates" mod_catalogue_validate "$mod_catalogue"
+all_mods="$(mod_resolve "$mod_catalogue" 2.8.4 all)"
+assert_eq "6" "$(jq length <<<"$all_mods")" "all six mods resolve for GTNH 2.8.4"
+assert_eq "6" "$(jq '[.[].artifact.sha256]|unique|length' <<<"$all_mods")" "mod artifacts have unique pinned checksums"
+assert_failure "unknown mod fails closed" mod_resolve "$mod_catalogue" 2.8.4 does-not-exist
+UI_MODE=plain
+assert_eq "gtnh-rates,ae2-things" "$(printf '1,3\n' | ui_mod_selector "$mod_catalogue" 2.8.4 '')" "plain mod checklist maps numbered choices"
+assert_eq "gtnh-rates,ae2-things" "$(printf '\n' | ui_mod_selector "$mod_catalogue" 2.8.4 'gtnh-rates,ae2-things')" "update mod checklist keeps installed defaults"
+
+config_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtnh-config-test.XXXXXX")"
+printf 'alpha=one\nmanaged=old\nomega=three\n' >"$config_dir/server.properties"
+properties_set "$config_dir/server.properties" managed new
+properties_set "$config_dir/server.properties" appended value
+assert_eq "new" "$(awk -F= '$1=="managed"{print $2}' "$config_dir/server.properties")" "properties patch updates one key"
+assert_eq "three" "$(awk -F= '$1=="omega"{print $2}' "$config_dir/server.properties")" "properties patch preserves unrelated keys"
+printf 'managed=a\nmanaged=b\n' >"$config_dir/duplicate.properties"
+assert_failure "duplicate property is rejected" properties_set "$config_dir/duplicate.properties" managed c
+printf 'commands {\n  B:enabled=false\n}\nworld {\n  B:enabled=false\n}\n' >"$config_dir/sections.cfg"
+cfg_set_in_section "$config_dir/sections.cfg" world 'B:enabled' true
+assert_eq "false true" "$(awk -F= '/B:enabled/{printf "%s%s",sep,$2;sep=" "}' "$config_dir/sections.cfg")" "section patch changes only requested duplicate key"
+printf '[player]\nserverutilities.homes.max=1\n[admin]\nserverutilities.homes.max=1\nserverutilities.homes.cross_dim: false\n' >"$config_dir/ranks.txt"
+ranks_set_admin "$config_dir/ranks.txt" serverutilities.homes.max 100
+ranks_set_admin "$config_dir/ranks.txt" serverutilities.homes.cross_dim true
+assert_eq "100 true" "$(awk -F': ' '/^\[admin\]/{admin=1;next} admin&&/homes.max/{a=$2} admin&&/homes.cross_dim/{b=$2} END{print a,b}' "$config_dir/ranks.txt")" "admin rank patch canonicalizes equals and colon formats"
+assert_eq "b50ad385-829d-3141-a216-7e7d7539ba7f" "$(offline_uuid Notch)" "offline UUID matches Minecraft algorithm"
+rm -rf -- "$config_dir"
+
+archive_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtnh-archive-test.XXXXXX")"
+mkdir -p "$archive_dir/safe"
+printf x >"$archive_dir/safe/file"
+(cd "$archive_dir" && zip -q safe.zip safe/file)
+assert_success "safe zip path validates" archive_validate "$archive_dir/safe.zip"
+printf 'not a zip\n' >"$archive_dir/invalid.zip"
+assert_failure "invalid zip fails closed" archive_validate "$archive_dir/invalid.zip"
+(cd "$archive_dir" && tar -czf safe.tar.gz safe/file)
+assert_success "safe backup tar path validates" tar_archive_validate "$archive_dir/safe.tar.gz"
+printf 'not a tar\n' >"$archive_dir/invalid.tar.gz"
+assert_failure "invalid backup tar fails closed" tar_archive_validate "$archive_dir/invalid.tar.gz"
+rm -rf -- "$archive_dir"
+
+systemctl() { return 0; }
+journalctl() { [[ "$*" == *'2026-08-15 12:34:56 UTC'* ]] && printf 'Done (1.0s)! For help, type "help"\n'; }
+system_path() { printf '/bin/true\n'; }
+assert_success "startup health is scoped to current restart time" service_wait_healthy test-service 1 '2026-08-15 12:34:56 UTC'
+unset -f systemctl journalctl system_path
 
 finish_tests

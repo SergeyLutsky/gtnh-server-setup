@@ -1,74 +1,98 @@
 # GTNH Server Setup
 
-An interactive Ubuntu installer and updater for a single GT New Horizons server. The project is being built in verified phases; phases 1–3 currently provide safe discovery, planning, and official GTNH release/Java resolution. They do **not** install or update a live server yet.
+An interactive, GitHub-loaded installer and updater for a private GT New Horizons server on Ubuntu. It installs the official server pack, Java, systemd service, curated optional mods, gameplay configuration, local administration, verified backups, and automatic update rollback.
 
-## Current usage
+## Install
 
-On a local checkout:
-
-```bash
-sudo apt-get install -y curl jq
-sudo bash install.sh --dry-run
-```
-
-The intended GitHub launch form is already supported and loads the project modules from the same branch:
+Run as `root` on a dedicated Ubuntu 22.04, 24.04, or 26.04 x86-64 server:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/SergeyLutsky/gtnh-server-setup/main/install.sh)" -- --dry-run
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/SergeyLutsky/gtnh-server-setup/main/install.sh)"
 ```
 
-Do not use the non-dry-run command yet. Native installation, systemd, firewall, and server lifecycle work starts in phase 4.
+The menus ask Install or Update, GTNH release, administrator username, and optional mods. A plain numbered UI is used when Whiptail is unavailable. No optional mods are selected by default on a clean install.
 
-Useful non-interactive planning example:
+For a preview that writes nothing:
 
 ```bash
-sudo bash install.sh --dry-run --plain --yes \
-  --action install --channel stable --install-path /opt/gtnh --port 25565
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/SergeyLutsky/gtnh-server-setup/main/install.sh)" -- --dry-run --yes --admin YourMinecraftName
 ```
 
-## What phases 1–3 include
-
-- strict Bash error handling, cleanup, exit-code, and resumable-operation contracts;
-- sanitized timestamped logging for mutating runs and terminal-only logging during dry runs;
-- Whiptail menus with a numbered terminal fallback;
-- Ubuntu LTS 22.04/24.04/26.04, root, x86-64, RAM, disk, interface/subnet, UFW, port, package, Java, and managed-install discovery;
-- a hard guard that rejects mutation functions during `--dry-run`;
-- stable and release-candidate filtering from GTNH's official machine-readable release catalogue;
-- exact modern-Java server-pack resolution and automatic Java 21 selection when supported;
-- project-pinned SHA-256 verification before any downloaded archive can be promoted;
-- versioned JSON schemas for installer state, release checksums, and the future optional-mod catalogue.
-
-Beta, pre-release, daily, and nightly packs are excluded. At this phase gate, the project-pinned server packs are GTNH `2.8.4` stable and `2.8.0-rc-2`. An exact historical version is rejected until its archive is reviewed and pinned.
-
-The Java policy prefers Java 21 because it is an LTS release available on supported Ubuntu installations and falls inside both current official server-pack ranges. The resolver verifies that choice against the range encoded in the official archive name and the upstream `maxJavaVersion` field.
-
-## Repository layout
-
-```text
-install.sh                    Direct/local entry point
-lib/                          Safety, UI, discovery, release, Java, state, diagnostics
-catalog/                      Pinned release checksums and optional-mod catalogue
-schemas/                      Versioned JSON contracts
-tests/                        Deterministic shell tests and fixtures
-scripts/                      Developer validation helpers
-PROJECT-SPEC.md               Agreed product behavior
-IMPLEMENTATION-PLAN.md        Phased delivery plan
-```
-
-## Developer verification
-
-Run on Ubuntu or another environment with Bash 5, curl, jq, and sha256sum:
+For a repeatable non-interactive install:
 
 ```bash
-bash -n install.sh lib/*.sh tests/*.sh tests/*.bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/SergeyLutsky/gtnh-server-setup/main/install.sh)" -- \
+  --yes --action install --channel stable --admin YourMinecraftName --mods all
+```
+
+Always inspect scripts before running them as root. This project deliberately runs Minecraft as root, as requested; a vulnerable server or mod would therefore control the VM. Keep the VM dedicated and do not store unrelated credentials on it.
+
+## Managed defaults
+
+- Install: `/opt/gtnh`; backups: `/var/backups/gtnh`; service: `gtnh.service`.
+- Latest stable GTNH by default; stable and RC selection are supported when their checksum is pinned.
+- Java 21 when supported by the selected official pack; safe heap chosen from host RAM.
+- Offline mode, no whitelist, Hard, 20 players, view distance 12, no PvP, flight allowed.
+- Selected Minecraft port is LAN-scoped when UFW is already active. UFW is never enabled by this installer.
+- RCON uses a generated 48-character password, a root-only file, and an explicit non-loopback firewall rejection. It is never opened in UFW.
+- Worldgen caves/mineshafts/underground lakes and dirt/gravel pockets are disabled before the first world starts. Pollution, machine explosions, fire spread, and butterfly spawning are disabled.
+- ServerUtilities homes, back, claims, chunk loading, ranks, half-hour live backups, and 50% sleep are configured.
+
+Offline mode does not authenticate usernames. Another user who can reach the server can impersonate an operator name; only permit trusted LAN clients.
+
+## Optional mods pinned for GTNH 2.8.4
+
+- GTNH Rates 1.11.0-2.8.4
+- Programmable Hatches 0.1.3p53
+- AE2 Things 1.2.14
+- Twist Space Technology 0.7.16
+- 123Technology 2.1.8_5
+- GT Not Leisure 0.1.9.1-280_rc2
+
+Artifacts and exact SHA-256 hashes are kept in `catalog/mods.json`. All six were tested together on GTNH 2.8.4; they loaded 295 total Forge mods and reached the ready state. Selected add-ons must also be installed on each client; the installer prints the exact client list.
+
+## Administration
+
+```bash
+gtnh status
+gtnh start
+gtnh stop
+gtnh restart
+gtnh logs
+gtnh command "list"
+gtnh backup my-before-change
+gtnh restore /var/backups/gtnh/my-before-change.tar.gz
+gtnh doctor
+```
+
+`gtnh restore` refuses a backup whose sidecar SHA-256 does not match. Automatic pre-update backups retain the five newest automatic snapshots; manually named backups are not pruned.
+
+Updates are forward-only. The updater verifies everything in a staging directory, stops the service, makes a verified backup, carries the world, player/quest/map data, configuration, catalogue mods, and unmanaged mods forward, then starts the staged server. A failed ready-state check automatically switches back to the old installation.
+
+## Useful options
+
+Run `install.sh --help` for the complete list. Important overrides include `--version`, `--install-path`, `--backup-path`, `--service-name`, `--port`, `--rcon-port`, `--heap-mib`, `--view-distance`, `--seed`, `--admin`, and `--mods none|all|ID,ID`.
+
+World pre-generation is intentionally not automatic. After confirming the server works, use your preferred compatible pre-generation command through `gtnh command`.
+
+## Tests
+
+```bash
+bash -n install.sh lib/*.sh bin/gtnh bin/gtnh-rcon-firewall
+shellcheck install.sh lib/*.sh bin/gtnh bin/gtnh-rcon-firewall
+python3 -m py_compile bin/gtnh-rcon.py
 bash tests/run.sh
 bash tests/dry-run.sh
 ```
 
-The fixture suite covers stable/RC/exact resolution, rejected beta/nightly/missing versions, Java ranges, pinned checksums, state identity, IPv4 subnet and port detection, both UI modes, logging redaction, operation recovery classification, checksum failure, and the dry-run no-change invariant.
+See `PROJECT-SPEC.md` for the contract and `IMPLEMENTATION-PLAN.md` for the staged validation plan.
 
-## Security boundary
+## Uninstall
 
-Running the Minecraft process as `root` is an explicit project requirement, but it gives a vulnerable server or mod control of the whole VM. Keep the VM dedicated to GTNH and do not place repository credentials, tokens, or unrelated secrets in the installation directory. Installer logs redact common secret forms and never upload diagnostics automatically.
+Stop and disable the service before removing anything. Review every path first, especially if you overrode defaults:
 
-Authoritative release metadata comes from the GTNH website repository's [`public/versions.json`](https://github.com/GTNewHorizons/GTNewHorizons.github.io/blob/master/public/versions.json). Server archives come only from the official GTNH download host.
+```bash
+systemctl disable --now gtnh.service
+```
+
+The installer does not provide an automatic destructive uninstall. Preserve `/var/backups/gtnh` before manually removing the service unit, runtime configuration, helper, and `/opt/gtnh`.

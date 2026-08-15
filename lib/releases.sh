@@ -64,6 +64,8 @@ release_attach_pinned_checksum() {
 }
 
 release_resolve() {
+  # The single-quoted filter fragments below intentionally contain jq variables.
+  # shellcheck disable=SC2016
   local json="$1" selector="$2" filter
   case "$selector" in
     latest-stable)
@@ -75,8 +77,10 @@ release_resolve() {
     *)
       jq -e --arg version "$selector" 'has($version)' >/dev/null <<<"$json" || return "$EX_DATAERR"
       if [[ "$selector" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        # shellcheck disable=SC2016
         filter='(.key == $specific) and (.value.title | ascii_downcase | startswith("stable"))'
       elif [[ "$selector" =~ (^|[-.])[Rr][Cc]-?[0-9]+$ ]]; then
+        # shellcheck disable=SC2016
         filter='(.key == $specific)'
       else
         return "$EX_DATAERR"

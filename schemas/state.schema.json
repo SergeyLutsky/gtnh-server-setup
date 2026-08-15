@@ -15,7 +15,10 @@
       "properties": {
         "path": { "$ref": "#/$defs/absolutePath" },
         "backupPath": { "$ref": "#/$defs/absolutePath" },
-        "serviceName": { "const": "gtnh.service" }
+        "serviceName": { "type": "string", "pattern": "^[A-Za-z0-9_.@-]+\\.service$" },
+        "minecraftPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "rconPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "heapMiB": { "type": "integer", "minimum": 4096 }
       }
     },
     "gtnh": {
@@ -46,7 +49,9 @@
         "required": ["id", "version", "artifact"],
         "properties": {
           "id": { "$ref": "#/$defs/id" },
+          "name": { "type": "string", "minLength": 1 },
           "version": { "type": "string", "minLength": 1 },
+          "clientRequired": { "type": "boolean" },
           "artifact": { "$ref": "#/$defs/artifact" }
         }
       }

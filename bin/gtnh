@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+CONFIG_FILE="${GTNH_CONFIG_FILE:-/etc/gtnh-server-setup.conf}"
+[[ -r "$CONFIG_FILE" ]] || { echo "GTNH runtime config not found: $CONFIG_FILE" >&2; exit 66; }
+# shellcheck disable=SC1090
+source "$CONFIG_FILE"
+
+rcon() { /usr/local/lib/gtnh-rcon.py "$GTNH_RCON_PORT" "$GTNH_RCON_PASSWORD" "$@"; }
+
+case "${1:-help}" in
+  status) systemctl --no-pager --full status "$GTNH_SERVICE" ;;
+  start|stop|restart) systemctl "$1" "$GTNH_SERVICE" ;;
+  logs) shift; journalctl -u "$GTNH_SERVICE" -f "${@}" ;;
+  command) shift; (($#)) || { echo 'usage: gtnh command COMMAND' >&2; exit 64; }; rcon "$*" ;;
+  backup)
+    name="${2:-manual-$(date -u +%Y%m%dT%H%M%SZ)}"
+    [[ "$name" =~ ^[A-Za-z0-9._-]+$ ]] || { echo 'invalid backup name' >&2; exit 64; }
+    rcon 'save-all flush' >/dev/null
+    rcon 'save-off' >/dev/null
+    mkdir -p "$GTNH_BACKUP_PATH"
+    chmod 0700 "$GTNH_BACKUP_PATH"
+    archive="$GTNH_BACKUP_PATH/$name.tar.gz"
+    if ! tar -C "$(dirname "$GTNH_INSTALL_PATH")" -czf "$archive.part" "$(basename "$GTNH_INSTALL_PATH")"; then
+      rcon 'save-on' >/dev/null || true
+      rm -f -- "$archive.part"
+      exit 74
+    fi
+    rcon 'save-on' >/dev/null
+    mv "$archive.part" "$archive"
+    (cd "$GTNH_BACKUP_PATH" && sha256sum "$(basename "$archive")" >"$(basename "$archive").sha256")
+    chmod 0600 "$archive" "$archive.sha256"
+    echo "$archive"
+    ;;
+  restore)
+    archive="${2:-}"; [[ -f "$archive" && -f "$archive.sha256" ]] || { echo 'backup and checksum required' >&2; exit 66; }
+    (cd "$(dirname "$archive")" && sha256sum -c "$(basename "$archive").sha256")
+    listing="$(tar -tzf "$archive")" || { echo 'invalid backup archive' >&2; exit 65; }
+    while IFS= read -r entry; do
+      [[ "$entry" != /* && "$entry" != *\\* && "$entry" != ../* && "$entry" != */../* && "$entry" != *'/..' ]] || { echo 'unsafe backup path' >&2; exit 65; }
+    done <<<"$listing"
+    systemctl stop "$GTNH_SERVICE"
+    failed="${GTNH_INSTALL_PATH}.before-restore.$(date +%s)"
+    mv "$GTNH_INSTALL_PATH" "$failed"
+    if ! tar -xzf "$archive" -C "$(dirname "$GTNH_INSTALL_PATH")"; then mv "$failed" "$GTNH_INSTALL_PATH"; exit 74; fi
+    systemctl start "$GTNH_SERVICE"
+    ;;
+  doctor)
+    failures=0
+    command -v java >/dev/null || { echo 'FAIL Java'; failures=$((failures+1)); }
+    [[ -r "$GTNH_INSTALL_PATH/.gtnh-installer/state.json" ]] || { echo 'FAIL state'; failures=$((failures+1)); }
+    systemctl is-active --quiet "$GTNH_SERVICE" || { echo 'FAIL service'; failures=$((failures+1)); }
+    rcon list >/dev/null || { echo 'FAIL RCON'; failures=$((failures+1)); }
+    ((failures==0)) && echo 'OK GTNH installation is healthy'
+    ((failures==0))
+    ;;
+  help|*)
+    echo 'Usage: gtnh {status|start|stop|restart|logs|command CMD|backup [NAME]|restore FILE|doctor}'
+    ;;
+esac

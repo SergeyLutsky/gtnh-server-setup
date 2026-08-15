@@ -24,7 +24,7 @@ export GTNH_TEST_EUID=0
 export GTNH_TEST_UNAME=x86_64
 
 bash "$ROOT/install.sh" --dry-run --plain --yes --action install --channel stable \
-  --release-metadata "$ROOT/tests/fixtures/releases.json" >/dev/null
+  --release-metadata "$ROOT/tests/fixtures/releases.json" --admin TestAdmin >/dev/null
 
 after="$(snapshot)"
 if [[ "$before" != "$after" ]]; then

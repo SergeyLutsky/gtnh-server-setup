@@ -1,4 +1,35 @@
 {
   "schemaVersion": 1,
-  "mods": []
+  "mods": [
+    {
+      "id": "gtnh-rates", "name": "GTNH Rates", "repository": "https://github.com/Sladki/GTNHRates", "clientRequired": true,
+      "dependencies": [], "conflicts": [],
+      "releases": [{"gtnh":"2.8.4","version":"1.11.0-2.8.4","asset":"gtnhrates-1.11.0-2.8.4.jar","url":"https://github.com/Sladki/GTNHRates/releases/download/1.11.0-2.8.4/gtnhrates-1.11.0-2.8.4.jar","sha256":"6175f3ac08727cf3962507d7c425e178353839b15fb7b6ad42fe60fb7c1da69c","sizeBytes":110714}]
+    },
+    {
+      "id": "programmable-hatches", "name": "Programmable Hatches", "repository": "https://github.com/reobf/Programmable-Hatches-Mod", "clientRequired": true,
+      "dependencies": [], "conflicts": [],
+      "releases": [{"gtnh":"2.8.4","version":"0.1.3p53","asset":"programmablehatches-0.1.3p53.jar","url":"https://github.com/reobf/Programmable-Hatches-Mod/releases/download/v0.1.3p53-beta/programmablehatches-0.1.3p53.jar","sha256":"29256c0113da0b0c45f3173453cde1fc659142e7b6b0e0d7e9c39a7dfcd601bf","sizeBytes":2018059}]
+    },
+    {
+      "id": "ae2-things", "name": "AE2 Things", "repository": "https://github.com/asdflj/AE2Things", "clientRequired": true,
+      "dependencies": [], "conflicts": [],
+      "releases": [{"gtnh":"2.8.4","version":"1.2.14","asset":"ae2thing-v1.2.14.jar","url":"https://github.com/asdflj/AE2Things/releases/download/v1.2.14/ae2thing-v1.2.14.jar","sha256":"4cecd096e091967434e6caab77551d05bd7e7891950d08a86c4ecdb5a2da6ba2","sizeBytes":995866}]
+    },
+    {
+      "id": "twist-space-technology", "name": "Twist Space Technology", "repository": "https://github.com/Nxer/Twist-Space-Technology-Mod", "clientRequired": true,
+      "dependencies": [], "conflicts": [],
+      "releases": [{"gtnh":"2.8.4","version":"0.7.16","asset":"TwistSpaceTechnology-0.7.16.jar","url":"https://github.com/Nxer/Twist-Space-Technology-Mod/releases/download/0.7.16/TwistSpaceTechnology-0.7.16.jar","sha256":"b51d0f4ea0a54edcaf286c3fbaf0894710ee2e20e50b5d7c9124845a46bfc9bd","sizeBytes":23731286}]
+    },
+    {
+      "id": "123-technology", "name": "123Technology", "repository": "https://github.com/CallmeSHaobe/123Technology", "clientRequired": true,
+      "dependencies": [], "conflicts": [],
+      "releases": [{"gtnh":"2.8.4","version":"2.1.8_5","asset":"OTHTechnology-2.1.8_5+2.8.4.jar","url":"https://github.com/CallmeSHaobe/123Technology/releases/download/2.1.8_5/OTHTechnology-2.1.8_5%2B2.8.4.jar","sha256":"de8e20313bd13e67cc4f206ec9d9a68b9967f52c46e92920699147c9e37a1d33","sizeBytes":6884762}]
+    },
+    {
+      "id": "gt-not-leisure", "name": "GT Not Leisure", "repository": "https://github.com/ABKQPO/GT-Not-Leisure", "clientRequired": true,
+      "dependencies": [], "conflicts": [],
+      "releases": [{"gtnh":"2.8.4","version":"0.1.9.1-280_rc2","asset":"sciencenotleisure-v0.1.9.1-280_rc2.jar","url":"https://github.com/ABKQPO/GT-Not-Leisure/releases/download/v0.1.9.1-280_rc2/sciencenotleisure-v0.1.9.1-280_rc2.jar","sha256":"461a84f6376cc952d63f6e9e5017cb3ab7abf79e45e72a7c1fcece9069614707","sizeBytes":17369981}]
+    }
+  ]
 }

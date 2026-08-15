@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+CONFIG_FILE="${GTNH_CONFIG_FILE:-/etc/gtnh-server-setup.conf}"
+[[ -r "$CONFIG_FILE" ]] || exit 66
+# shellcheck disable=SC1090
+source "$CONFIG_FILE"
+rule=(-p tcp '!' -i lo --dport "$GTNH_RCON_PORT" -j REJECT)
+case "${1:-}" in
+  add) iptables -C INPUT "${rule[@]}" 2>/dev/null || iptables -I INPUT 1 "${rule[@]}" ;;
+  remove) while iptables -C INPUT "${rule[@]}" 2>/dev/null; do iptables -D INPUT "${rule[@]}"; done ;;
+  *) echo 'usage: gtnh-rcon-firewall add|remove' >&2; exit 64 ;;
+esac
