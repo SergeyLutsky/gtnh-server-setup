@@ -29,7 +29,36 @@
         "updateResetPaths":[
           "config/GregTech/GregTech.lang",
           "config/TwistSpaceTechnology.cfg"
-        ]
+        ],
+        "contentPacks":[{
+          "id":"twist-stuff",
+          "name":"Twist Stuff quests",
+          "version":"2.8.4-20260323",
+          "repository":"https://github.com/AdityaVG13/Twist-Stuff",
+          "archive":{
+            "name":"twist-stuff-c41ea6a1b1d67ce7f45e955c3899c561b0703250.zip",
+            "url":"https://github.com/AdityaVG13/Twist-Stuff/archive/c41ea6a1b1d67ce7f45e955c3899c561b0703250.zip",
+            "sha256":"e4959e40624f2a38bd1e1e911a51fdb5805abc4d03b383a7837a0c31a0ae8e21",
+            "sizeBytes":276959
+          },
+          "archiveRoot":"Twist-Stuff-c41ea6a1b1d67ce7f45e955c3899c561b0703250/Quests and Stuff",
+          "target":"config/betterquesting/DefaultQuests",
+          "replacePaths":[
+            "QuestLines/TwistSpaceTechno-_-aiEKuQSJy_zPlDW08sDA==",
+            "Quests/TwistSpaceTechno-_-aiEKuQSJy_zPlDW08sDA==",
+            "QuestLinesOrder.txt"
+          ],
+          "requiredEntries":[
+            "Twist-Stuff-c41ea6a1b1d67ce7f45e955c3899c561b0703250/Quests and Stuff/QuestLines/TwistSpaceTechno-_-aiEKuQSJy_zPlDW08sDA==/",
+            "Twist-Stuff-c41ea6a1b1d67ce7f45e955c3899c561b0703250/Quests and Stuff/Quests/TwistSpaceTechno-_-aiEKuQSJy_zPlDW08sDA==/",
+            "Twist-Stuff-c41ea6a1b1d67ce7f45e955c3899c561b0703250/Quests and Stuff/QuestLinesOrder.txt"
+          ]
+        }],
+        "postStartChecks":[{
+          "name":"Twist Stuff quest database load",
+          "command":"bq_admin default load",
+          "contains":["Reloaded default quest database"]
+        }]
       }]
     },
     {

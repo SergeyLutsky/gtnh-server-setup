@@ -139,6 +139,10 @@ assert_eq "0.2.6-hotfix1" "$(jq -r .version <<<"$gtnl")" "GT Not Leisure uses th
 assert_eq "2" "$(jq '[.artifactEntries[]|select(contains("SteamAge"))]|length' <<<"$gtnl")" "GT Not Leisure pins both built-in quest lines"
 assert_eq "2" "$(jq '.[0].contains|length' <<<"$(jq -c '.postStartChecks' <<<"$gtnl")")" "GT Not Leisure has post-start checks for both quest lines"
 assert_eq '["config/GregTech/GregTech.lang","config/TwistSpaceTechnology.cfg"]' "$(jq -c '.updateResetPaths' <<<"$tst")" "Twist Space Technology pins its documented update resets"
+assert_eq "2.8.4-20260323" "$(jq -r '.contentPacks[0].version' <<<"$tst")" "Twist Space Technology pins the pre-2.9 Twist Stuff snapshot"
+assert_eq "bq_admin default load" "$(jq -r '.postStartChecks[0].command' <<<"$tst")" "Twist Stuff reloads the live default quest database"
+malformed_content_catalogue="$(jq '.mods[] |= if .id=="twist-space-technology" then .releases[0].contentPacks[0].target="../../outside" else . end' <<<"$mod_catalogue")"
+assert_failure "unsafe quest content target fails catalogue validation" mod_catalogue_validate "$malformed_content_catalogue"
 assert_failure "unknown mod fails closed" mod_resolve "$mod_catalogue" 2.8.4 does-not-exist
 UI_MODE=plain
 assert_eq "gtnh-rates,ae2-things" "$(printf '1,3\n' | ui_mod_selector "$mod_catalogue" 2.8.4 '')" "plain mod checklist maps numbered choices"
@@ -199,6 +203,34 @@ if [[ -e "$mod_validation_dir/stage/config/TwistSpaceTechnology.cfg" ]]; then
 else
   fail "same-version reconciliation preserves Twist Space Technology configuration"
 fi
+
+content_archive="$(jq -r '.contentPacks[0].archive.name' <<<"$tst")"
+content_root="$(jq -r '.contentPacks[0].archiveRoot' <<<"$tst")"
+content_chapter="TwistSpaceTechno-_-aiEKuQSJy_zPlDW08sDA=="
+mkdir -p "$mod_validation_dir/content-build/$content_root/QuestLines/$content_chapter" \
+  "$mod_validation_dir/content-build/$content_root/Quests/$content_chapter" \
+  "$mod_validation_dir/stage/config/betterquesting/DefaultQuests/QuestLines/$content_chapter" \
+  "$mod_validation_dir/stage/config/betterquesting/DefaultQuests/Quests/$content_chapter"
+printf new-line >"$mod_validation_dir/content-build/$content_root/QuestLines/$content_chapter/new.json"
+printf new-quest >"$mod_validation_dir/content-build/$content_root/Quests/$content_chapter/new.json"
+printf new-order >"$mod_validation_dir/content-build/$content_root/QuestLinesOrder.txt"
+printf stale >"$mod_validation_dir/stage/config/betterquesting/DefaultQuests/QuestLines/$content_chapter/stale.json"
+printf stale >"$mod_validation_dir/stage/config/betterquesting/DefaultQuests/Quests/$content_chapter/stale.json"
+printf keep >"$mod_validation_dir/stage/config/betterquesting/DefaultQuests/unrelated.json"
+(cd "$mod_validation_dir/content-build" && zip -qr "$mod_validation_dir/$content_archive" .)
+assert_success "Twist Stuff archive content validates" mods_validate_content_packs "[$tst]" "$mod_validation_dir"
+assert_success "Twist Stuff installs into BetterQuesting defaults" mods_apply_content_packs "[$tst]" "$mod_validation_dir" "$mod_validation_dir/stage"
+if [[ -f "$mod_validation_dir/stage/config/betterquesting/DefaultQuests/QuestLines/$content_chapter/new.json" && \
+      -f "$mod_validation_dir/stage/config/betterquesting/DefaultQuests/Quests/$content_chapter/new.json" && \
+      ! -e "$mod_validation_dir/stage/config/betterquesting/DefaultQuests/QuestLines/$content_chapter/stale.json" && \
+      "$(<"$mod_validation_dir/stage/config/betterquesting/DefaultQuests/QuestLinesOrder.txt")" == new-order && \
+      -f "$mod_validation_dir/stage/config/betterquesting/DefaultQuests/unrelated.json" ]]; then
+  pass "Twist Stuff replaces only its managed quest content and order"
+else
+  fail "Twist Stuff replaces only its managed quest content and order"
+fi
+unsafe_tst="$(jq '.contentPacks[0].target="config/../../outside"' <<<"$tst")"
+assert_failure "Twist Stuff extraction cannot escape staging" mods_apply_content_packs "[$unsafe_tst]" "$mod_validation_dir" "$mod_validation_dir/stage"
 rm -rf -- "$mod_validation_dir"
 
 config_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtnh-config-test.XXXXXX")"

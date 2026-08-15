@@ -18,6 +18,21 @@ mod_catalogue_validate() {
             (.sha256|type=="string" and test("^[a-f0-9]{64}$")) and
             (.sizeBytes|type=="number" and .>0) end) and
           (.entries // [] | all(.[]; type=="string" and length>0)))) and
+        (.contentPacks // [] | all(.[];
+          (.id|type=="string" and test("^[a-z0-9][a-z0-9-]*$")) and
+          (.name|type=="string" and length>0) and
+          (.version|type=="string" and length>0) and
+          (.repository|type=="string" and startswith("https://github.com/")) and
+          (.archive.name|type=="string" and test("^[A-Za-z0-9._+-]+\\.zip$")) and
+          (.archive.url|type=="string" and startswith("https://github.com/")) and
+          (.archive.sha256|type=="string" and test("^[a-f0-9]{64}$")) and
+          (.archive.sizeBytes|type=="number" and .>0) and
+          (.archiveRoot|type=="string" and test("^[A-Za-z0-9._+ =/-]+$") and (contains("..")|not)) and
+          (.target|type=="string" and test("^config/[A-Za-z0-9._+ =/-]+$") and (contains("..")|not)) and
+          (.replacePaths|type=="array" and length>0 and all(.[];
+            type=="string" and test("^[A-Za-z0-9._+ =/-]+$") and (contains("..")|not))) and
+          (.requiredEntries|type=="array" and length>0 and all(.[];
+            type=="string" and test("^[A-Za-z0-9._+ =/-]+$") and (contains("..")|not))))) and
         (.postStartChecks // [] | all(.[];
           (.name|type=="string" and length>0) and
           (.command|type=="string" and test("^[A-Za-z0-9._ -]+$")) and
@@ -40,6 +55,7 @@ mod_resolve() {
         artifact:{name:$r.asset,url:$r.url,sha256:$r.sha256,sizeBytes:$r.sizeBytes},
         artifactEntries:($r.artifactEntries // []),
         runtimeRequirements:($r.runtimeRequirements // []),
+        contentPacks:($r.contentPacks // []),
         postStartChecks:($r.postStartChecks // []),
         updateResetPaths:($r.updateResetPaths // [])
       } ]
@@ -72,6 +88,13 @@ mods_download_runtime_requirements() {
     artifact="$(jq -c --arg name "$(jq -r '.jar' <<<"$requirement")" '.artifact + {name:$name}' <<<"$requirement")"
     mod_artifact_download "$artifact" "$target" || return $?
   done < <(jq -c '.[] | .runtimeRequirements[]? | select(.artifact != null)' <<<"$resolved")
+}
+
+mods_download_content_packs() {
+  local resolved="$1" target="$2" pack
+  while IFS= read -r pack; do
+    mod_artifact_download "$(jq -c '.archive' <<<"$pack")" "$target" || return $?
+  done < <(jq -c '.[] | .contentPacks[]?' <<<"$resolved")
 }
 
 jar_has_entry() {
@@ -112,6 +135,59 @@ mods_validate_runtime_requirements() {
       done < <(jq -r '.entries[]?' <<<"$requirement")
     done < <(jq -c '.runtimeRequirements[]?' <<<"$row")
   done < <(jq -c '.[]' <<<"$resolved")
+}
+
+zip_has_entry() {
+  local archive="$1" entry="$2"
+  unzip -Z1 "$archive" | grep -Fx -- "$entry" >/dev/null
+}
+
+mods_validate_content_packs() {
+  local resolved="$1" target="$2" pack archive entry
+  while IFS= read -r pack; do
+    archive="$target/$(jq -r '.archive.name' <<<"$pack")"
+    [[ -f "$archive" ]] || return "$EX_NOINPUT"
+    archive_validate "$archive" || return $?
+    while IFS= read -r entry; do
+      zip_has_entry "$archive" "$entry" || {
+        log_error "quest content archive is missing required content: $(basename -- "$archive"): $entry"
+        return "$EX_DATAERR"
+      }
+    done < <(jq -r '.requiredEntries[]' <<<"$pack")
+  done < <(jq -c '.[] | .contentPacks[]?' <<<"$resolved")
+}
+
+mods_apply_content_packs() {
+  local resolved="$1" downloads="$2" stage="$3" pack archive root target extract source path destination
+  local stage_real target_real destination_real
+  stage_real="$(realpath -m -- "$stage")"
+  while IFS= read -r pack; do
+    archive="$downloads/$(jq -r '.archive.name' <<<"$pack")"
+    root="$(jq -r '.archiveRoot' <<<"$pack")"
+    target="$(jq -r '.target' <<<"$pack")"
+    [[ "$root" != /* && "$root" != *..* && "$target" == config/* && "$target" != *..* ]] || return "$EX_DATAERR"
+    target_real="$(realpath -m -- "$stage/$target")"
+    [[ "$target_real" == "$stage_real/"* ]] || return "$EX_DATAERR"
+    extract="$(mktemp -d "$downloads/.content-pack.XXXXXX")"
+    unzip -q "$archive" -d "$extract" || { rm -rf -- "$extract"; return "$EX_DATAERR"; }
+    if find "$extract" -type l -print -quit | grep -q .; then rm -rf -- "$extract"; return "$EX_DATAERR"; fi
+    source="$extract/$root"
+    [[ -d "$source" ]] || { rm -rf -- "$extract"; return "$EX_DATAERR"; }
+    while IFS= read -r path; do
+      [[ "$path" != /* && "$path" != *..* ]] || { rm -rf -- "$extract"; return "$EX_DATAERR"; }
+      destination="$stage/$target/$path"
+      destination_real="$(realpath -m -- "$destination")"
+      [[ "$destination_real" == "$target_real/"* && -e "$source/$path" ]] || {
+        rm -rf -- "$extract"
+        return "$EX_DATAERR"
+      }
+      rm -rf -- "$destination_real"
+      install -d -m 0755 -- "$(dirname -- "$destination_real")"
+      cp -a -- "$source/$path" "$destination_real"
+    done < <(jq -r '.replacePaths[]' <<<"$pack")
+    rm -rf -- "$extract"
+    log_info "installed quest content: $(jq -r '.name + " " + .version' <<<"$pack")"
+  done < <(jq -c '.[] | .contentPacks[]?' <<<"$resolved")
 }
 
 mods_apply_update_migrations() {

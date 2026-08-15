@@ -245,7 +245,7 @@ execute_change() {
   version="$(jq -r .version <<<"$RESOLVED_RELEASE_JSON")"; sha="$(jq -r .serverAsset.sha256 <<<"$RESOLVED_RELEASE_JSON")"
   java_package="$(jq -r .package <<<"$RESOLVED_JAVA_JSON")"
   packages_install "$java_package"
-  require_commands curl jq unzip tar rsync sha256sum python3 openssl java
+  require_commands curl jq unzip tar rsync sha256sum python3 openssl java realpath
   java_version="$(java_detect_installed)"
   work="$(mktemp -d "${TMPDIR:-/tmp}/gtnh-install.XXXXXX")"; register_cleanup_path "$work"
   archive="$(release_download_and_verify "$RESOLVED_RELEASE_JSON" "$work" "$sha")" || die "$EX_UNAVAILABLE" "server pack download or checksum verification failed"
@@ -268,8 +268,10 @@ execute_change() {
 
   mods_download "$RESOLVED_MODS_JSON" "$stage/mods" || { rm -rf -- "$stage"; die "$EX_DATAERR" "optional mod download or checksum verification failed"; }
   mods_download_runtime_requirements "$RESOLVED_MODS_JSON" "$stage/mods" || { rm -rf -- "$stage"; die "$EX_DATAERR" "optional mod dependency download or checksum verification failed"; }
+  mods_download_content_packs "$RESOLVED_MODS_JSON" "$work/content-packs" || { rm -rf -- "$stage"; die "$EX_DATAERR" "quest content download or checksum verification failed"; }
   mods_validate_artifacts "$RESOLVED_MODS_JSON" "$stage/mods" || { rm -rf -- "$stage"; die "$EX_DATAERR" "optional mod content validation failed"; }
   mods_validate_runtime_requirements "$RESOLVED_MODS_JSON" "$stage/mods" || { rm -rf -- "$stage"; die "$EX_DATAERR" "optional mod runtime requirements are missing or incompatible"; }
+  mods_validate_content_packs "$RESOLVED_MODS_JSON" "$work/content-packs" || { rm -rf -- "$stage"; die "$EX_DATAERR" "quest content validation failed"; }
   if [[ "$ACTION" == update ]]; then
     if [[ "${GTNH_TEST_MODE:-false}" != true ]]; then systemctl stop "$SERVICE_NAME" 2>/dev/null || true; fi
     backup="$(backup_create "$INSTALL_PATH" "$BACKUP_PATH")" || {
@@ -309,6 +311,11 @@ execute_change() {
       die "$EX_DATAERR" "optional-mod update migration failed"
     }
   fi
+  mods_apply_content_packs "$RESOLVED_MODS_JSON" "$work/content-packs" "$stage" || {
+    [[ "$ACTION" != update || "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
+    rm -rf -- "$stage"
+    die "$EX_DATAERR" "quest content installation failed"
+  }
   rcon_password="$(rcon_password_generate)"; log_register_secret "$rcon_password"
   config_apply "$stage" "$MINECRAFT_PORT" "$WORLD_SEED" "$VIEW_DISTANCE" "$ADMIN_USERNAME" "$RCON_PORT" "$rcon_password" || {
     [[ "$ACTION" != update || "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
@@ -359,6 +366,7 @@ execute_change() {
   printf 'Minecraft EULA: https://www.minecraft.net/eula\n'
   jq -r '.[]|select(.clientRequired)|"Client mod required: \(.name) \(.version)"' <<<"$final_mods_json"
   jq -r '.[]|.runtimeRequirements[]?|select(.clientRequired==true)|"Client dependency required: \(.name)"' <<<"$final_mods_json"
+  jq -r '.[]|.contentPacks[]?|"Server quest content installed: \(.name) \(.version)"' <<<"$final_mods_json"
 }
 
 main() {

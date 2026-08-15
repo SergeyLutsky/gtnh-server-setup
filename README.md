@@ -49,7 +49,9 @@ Offline mode does not authenticate usernames. Another user who can reach the ser
 - 123Technology 2.1.8_5
 - GT Not Leisure 0.2.6-hotfix1
 
-Artifacts and exact SHA-256 hashes are kept in `catalog/mods.json`. GT Not Leisure includes its two default quest lines in the mod JAR. The installer verifies those resources and GTNH 2.8.4's compatible BetterQuesting, automatically installs the separately pinned BetterQuestingAPI 1.1.2, and requires both quest chapters to appear in the live API before declaring startup healthy. After creating the pre-update backup, version updates also perform each author's required generated-file resets: `GregTech.lang` plus the current or legacy GT Not Leisure configuration for GT Not Leisure, and `GregTech.lang` plus `TwistSpaceTechnology.cfg` for Twist Space Technology. Same-version reconciliation preserves these files.
+Artifacts and exact SHA-256 hashes are kept in `catalog/mods.json`. Selecting Twist Space Technology automatically installs the pinned GTNH 2.8.4 Twist Stuff quest snapshot into BetterQuesting's `DefaultQuests`, reloads the live quest database without resetting player progress, and fails or rolls back if the reload is not confirmed. The installer deliberately does not follow Twist Stuff's `main` branch because it now contains GTNH 2.9 quest changes.
+
+GT Not Leisure includes its two default quest lines in the mod JAR. The installer verifies those resources and GTNH 2.8.4's compatible BetterQuesting, automatically installs the separately pinned BetterQuestingAPI 1.1.2, and requires both quest chapters to appear in the live API before declaring startup healthy. After creating the pre-update backup, version updates also perform each author's required generated-file resets: `GregTech.lang` plus the current or legacy GT Not Leisure configuration for GT Not Leisure, and `GregTech.lang` plus `TwistSpaceTechnology.cfg` for Twist Space Technology. Same-version reconciliation preserves these files.
 
 All six mods were tested together on GTNH 2.8.4 and reached the ready state. Selected add-ons must also be installed on each client; the installer prints the exact client list.
 
