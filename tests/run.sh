@@ -140,7 +140,7 @@ assert_eq "2" "$(jq '[.artifactEntries[]|select(contains("SteamAge"))]|length' <
 assert_eq "2" "$(jq '.[0].contains|length' <<<"$(jq -c '.postStartChecks' <<<"$gtnl")")" "GT Not Leisure has post-start checks for both quest lines"
 assert_eq '["config/GregTech/GregTech.lang","config/TwistSpaceTechnology.cfg"]' "$(jq -c '.updateResetPaths' <<<"$tst")" "Twist Space Technology pins its documented update resets"
 assert_eq "2.8.4-20260323" "$(jq -r '.contentPacks[0].version' <<<"$tst")" "Twist Space Technology pins the pre-2.9 Twist Stuff snapshot"
-assert_eq "bq_admin default load" "$(jq -r '.postStartChecks[0].command' <<<"$tst")" "Twist Stuff reloads the live default quest database"
+assert_eq "bq_admin default load" "$(jq -r '.postStartLogChecks[0].command' <<<"$tst")" "Twist Stuff reloads the live default quest database"
 malformed_content_catalogue="$(jq '.mods[] |= if .id=="twist-space-technology" then .releases[0].contentPacks[0].target="../../outside" else . end' <<<"$mod_catalogue")"
 assert_failure "unsafe quest content target fails catalogue validation" mod_catalogue_validate "$malformed_content_catalogue"
 assert_failure "unknown mod fails closed" mod_resolve "$mod_catalogue" 2.8.4 does-not-exist
@@ -232,6 +232,23 @@ fi
 unsafe_tst="$(jq '.contentPacks[0].target="config/../../outside"' <<<"$tst")"
 assert_failure "Twist Stuff extraction cannot escape staging" mods_apply_content_packs "[$unsafe_tst]" "$mod_validation_dir" "$mod_validation_dir/stage"
 rm -rf -- "$mod_validation_dir"
+
+post_start_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtnh-post-start.XXXXXX")"
+mkdir -p "$post_start_dir/system/etc" "$post_start_dir/system/usr/local/bin" "$post_start_dir/install/logs"
+printf 'GTNH_INSTALL_PATH=%q\n' "$post_start_dir/install" >"$post_start_dir/system/etc/gtnh.conf"
+printf '%s\n' '#!/usr/bin/env bash' \
+  'if [[ "$*" == "command bq_admin default load" ]]; then printf "%s\n" "Reloaded default quest database" >>"$GTNH_TEST_LOG_FILE"; exit 1; fi' \
+  '[[ "$*" == "command list" ]]' >"$post_start_dir/system/usr/local/bin/gtnh"
+chmod 0755 "$post_start_dir/system/usr/local/bin/gtnh"
+export GTNH_SYSTEM_ROOT="$post_start_dir/system" GTNH_TEST_LOG_FILE="$post_start_dir/install/logs/latest.log" GTNH_POST_START_LOG_TIMEOUT=1
+: >"$GTNH_TEST_LOG_FILE"
+log_check_resolved='[{"postStartChecks":[],"postStartLogChecks":[{"name":"quest reload","command":"bq_admin default load","logContains":"Reloaded default quest database"}]}]'
+assert_success "quest reload accepts a fresh log marker after an incomplete RCON response" mods_validate_post_start "$log_check_resolved" gtnh
+printf '%s\n' '#!/usr/bin/env bash' '[[ "$*" == "command list" ]]' >"$post_start_dir/system/usr/local/bin/gtnh"
+chmod 0755 "$post_start_dir/system/usr/local/bin/gtnh"
+assert_failure "quest reload rejects a stale log marker" mods_validate_post_start "$log_check_resolved" gtnh
+unset GTNH_SYSTEM_ROOT GTNH_TEST_LOG_FILE GTNH_POST_START_LOG_TIMEOUT
+rm -rf -- "$post_start_dir"
 
 config_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtnh-config-test.XXXXXX")"
 printf 'alpha=one\nmanaged=old\nomega=three\n' >"$config_dir/server.properties"

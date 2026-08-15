@@ -54,10 +54,10 @@
             "Twist-Stuff-c41ea6a1b1d67ce7f45e955c3899c561b0703250/Quests and Stuff/QuestLinesOrder.txt"
           ]
         }],
-        "postStartChecks":[{
+        "postStartLogChecks":[{
           "name":"Twist Stuff quest database load",
           "command":"bq_admin default load",
-          "contains":["Reloaded default quest database"]
+          "logContains":"Reloaded default quest database"
         }]
       }]
     },

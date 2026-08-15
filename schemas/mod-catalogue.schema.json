@@ -129,6 +129,19 @@
                   }
                 }
               },
+              "postStartLogChecks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "command", "logContains"],
+                  "properties": {
+                    "name": { "type": "string", "minLength": 1 },
+                    "command": { "type": "string", "pattern": "^[A-Za-z0-9._ -]+$" },
+                    "logContains": { "type": "string", "minLength": 1 }
+                  }
+                }
+              },
               "updateResetPaths": {
                 "type": "array",
                 "items": { "type": "string", "pattern": "^config/[A-Za-z0-9._/-]+$" },

@@ -37,6 +37,10 @@ mod_catalogue_validate() {
           (.name|type=="string" and length>0) and
           (.command|type=="string" and test("^[A-Za-z0-9._ -]+$")) and
           (.contains|type=="array" and length>0 and all(.[]; type=="string" and length>0)))) and
+        (.postStartLogChecks // [] | all(.[];
+          (.name|type=="string" and length>0) and
+          (.command|type=="string" and test("^[A-Za-z0-9._ -]+$")) and
+          (.logContains|type=="string" and length>0))) and
         (.updateResetPaths // [] | all(.[];
           type=="string" and test("^config/[A-Za-z0-9._/-]+$") and
           (contains("..")|not)))))
@@ -57,6 +61,7 @@ mod_resolve() {
         runtimeRequirements:($r.runtimeRequirements // []),
         contentPacks:($r.contentPacks // []),
         postStartChecks:($r.postStartChecks // []),
+        postStartLogChecks:($r.postStartLogChecks // []),
         updateResetPaths:($r.updateResetPaths // [])
       } ]
     | if ($ids!="all" and length != ($want|length)) then error("unknown or incompatible mod") else . end
@@ -208,11 +213,12 @@ mods_apply_update_migrations() {
 }
 
 mods_validate_post_start() {
-  local resolved="$1" service="$2" check output expected
+  local resolved="$1" service="$2" check output expected config_file helper log_file start_line deadline
   [[ "${GTNH_TEST_MODE:-false}" == true ]] && return 0
+  config_file="$(system_path "/etc/${service}.conf")"
+  helper="$(system_path /usr/local/bin/gtnh)"
   while IFS= read -r check; do
-    output="$(GTNH_CONFIG_FILE="$(system_path "/etc/${service}.conf")" \
-      "$(system_path /usr/local/bin/gtnh)" command "$(jq -r '.command' <<<"$check")")" || return "$EX_TEMPFAIL"
+    output="$(GTNH_CONFIG_FILE="$config_file" "$helper" command "$(jq -r '.command' <<<"$check")")" || return "$EX_TEMPFAIL"
     while IFS= read -r expected; do
       grep -F -- "$expected" <<<"$output" >/dev/null || {
         log_error "post-start validation failed: $(jq -r '.name' <<<"$check") is missing $expected"
@@ -220,4 +226,26 @@ mods_validate_post_start() {
       }
     done < <(jq -r '.contains[]' <<<"$check")
   done < <(jq -c '.[] | .postStartChecks[]?' <<<"$resolved")
+
+  # Some long BetterQuesting admin commands complete successfully but close
+  # their RCON response. Prove those actions from a fresh log marker, then
+  # require a new RCON connection so a stale marker cannot pass the check.
+  # shellcheck disable=SC1090
+  source "$config_file"
+  log_file="$GTNH_INSTALL_PATH/logs/latest.log"
+  while IFS= read -r check; do
+    [[ -f "$log_file" ]] || return "$EX_NOINPUT"
+    start_line="$(wc -l <"$log_file")"
+    GTNH_CONFIG_FILE="$config_file" "$helper" command "$(jq -r '.command' <<<"$check")" >/dev/null 2>&1 || true
+    deadline=$((SECONDS + ${GTNH_POST_START_LOG_TIMEOUT:-60}))
+    while ((SECONDS < deadline)); do
+      if tail -n "+$((start_line + 1))" "$log_file" | grep -F -- "$(jq -r '.logContains' <<<"$check")" >/dev/null; then break; fi
+      sleep 1
+    done
+    if ! tail -n "+$((start_line + 1))" "$log_file" | grep -F -- "$(jq -r '.logContains' <<<"$check")" >/dev/null; then
+      log_error "post-start validation failed: $(jq -r '.name' <<<"$check") did not produce a fresh server log marker"
+      return "$EX_TEMPFAIL"
+    fi
+    GTNH_CONFIG_FILE="$config_file" "$helper" command list >/dev/null || return "$EX_TEMPFAIL"
+  done < <(jq -c '.[] | .postStartLogChecks[]?' <<<"$resolved")
 }
