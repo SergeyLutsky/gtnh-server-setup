@@ -19,7 +19,18 @@
     {
       "id": "twist-space-technology", "name": "Twist Space Technology", "repository": "https://github.com/Nxer/Twist-Space-Technology-Mod", "clientRequired": true,
       "dependencies": [], "conflicts": [],
-      "releases": [{"gtnh":"2.8.4","version":"0.7.16","asset":"TwistSpaceTechnology-0.7.16.jar","url":"https://github.com/Nxer/Twist-Space-Technology-Mod/releases/download/0.7.16/TwistSpaceTechnology-0.7.16.jar","sha256":"b51d0f4ea0a54edcaf286c3fbaf0894710ee2e20e50b5d7c9124845a46bfc9bd","sizeBytes":23731286}]
+      "releases": [{
+        "gtnh":"2.8.4",
+        "version":"0.7.16",
+        "asset":"TwistSpaceTechnology-0.7.16.jar",
+        "url":"https://github.com/Nxer/Twist-Space-Technology-Mod/releases/download/0.7.16/TwistSpaceTechnology-0.7.16.jar",
+        "sha256":"b51d0f4ea0a54edcaf286c3fbaf0894710ee2e20e50b5d7c9124845a46bfc9bd",
+        "sizeBytes":23731286,
+        "updateResetPaths":[
+          "config/GregTech/GregTech.lang",
+          "config/TwistSpaceTechnology.cfg"
+        ]
+      }]
     },
     {
       "id": "123-technology", "name": "123Technology", "repository": "https://github.com/CallmeSHaobe/123Technology", "clientRequired": true,

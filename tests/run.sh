@@ -134,9 +134,11 @@ all_mods="$(mod_resolve "$mod_catalogue" 2.8.4 all)"
 assert_eq "6" "$(jq length <<<"$all_mods")" "all six mods resolve for GTNH 2.8.4"
 assert_eq "6" "$(jq '[.[].artifact.sha256]|unique|length' <<<"$all_mods")" "mod artifacts have unique pinned checksums"
 gtnl="$(jq -c '.[]|select(.id=="gt-not-leisure")' <<<"$all_mods")"
+tst="$(jq -c '.[]|select(.id=="twist-space-technology")' <<<"$all_mods")"
 assert_eq "0.2.6-hotfix1" "$(jq -r .version <<<"$gtnl")" "GT Not Leisure uses the compatible 0.2.6 hotfix"
 assert_eq "2" "$(jq '[.artifactEntries[]|select(contains("SteamAge"))]|length' <<<"$gtnl")" "GT Not Leisure pins both built-in quest lines"
 assert_eq "2" "$(jq '.[0].contains|length' <<<"$(jq -c '.postStartChecks' <<<"$gtnl")")" "GT Not Leisure has post-start checks for both quest lines"
+assert_eq '["config/GregTech/GregTech.lang","config/TwistSpaceTechnology.cfg"]' "$(jq -c '.updateResetPaths' <<<"$tst")" "Twist Space Technology pins its documented update resets"
 assert_failure "unknown mod fails closed" mod_resolve "$mod_catalogue" 2.8.4 does-not-exist
 UI_MODE=plain
 assert_eq "gtnh-rates,ae2-things" "$(printf '1,3\n' | ui_mod_selector "$mod_catalogue" 2.8.4 '')" "plain mod checklist maps numbered choices"
@@ -177,6 +179,25 @@ if [[ -e "$mod_validation_dir/stage/config/GTNotLeisure/GTNotLeisure.cfg" ]]; th
   pass "same-version reconciliation preserves GT Not Leisure configuration"
 else
   fail "same-version reconciliation preserves GT Not Leisure configuration"
+fi
+
+printf old >"$mod_validation_dir/stage/config/GregTech/GregTech.lang"
+printf old >"$mod_validation_dir/stage/config/TwistSpaceTechnology.cfg"
+printf keep >"$mod_validation_dir/stage/config/TwistSpaceTechnology.keep.cfg"
+old_tst_state="$(jq -cn --argjson mod "$(jq '.version="0.7.15"' <<<"$tst")" '{mods:[$mod]}')"
+mods_apply_update_migrations "$old_tst_state" "[$tst]" "$mod_validation_dir/stage"
+if [[ ! -e "$mod_validation_dir/stage/config/GregTech/GregTech.lang" && ! -e "$mod_validation_dir/stage/config/TwistSpaceTechnology.cfg" && -e "$mod_validation_dir/stage/config/TwistSpaceTechnology.keep.cfg" ]]; then
+  pass "Twist Space Technology update resets only documented generated files"
+else
+  fail "Twist Space Technology update resets only documented generated files"
+fi
+printf current >"$mod_validation_dir/stage/config/TwistSpaceTechnology.cfg"
+current_tst_state="$(jq -cn --argjson mod "$tst" '{mods:[$mod]}')"
+mods_apply_update_migrations "$current_tst_state" "[$tst]" "$mod_validation_dir/stage"
+if [[ -e "$mod_validation_dir/stage/config/TwistSpaceTechnology.cfg" ]]; then
+  pass "same-version reconciliation preserves Twist Space Technology configuration"
+else
+  fail "same-version reconciliation preserves Twist Space Technology configuration"
 fi
 rm -rf -- "$mod_validation_dir"
 
