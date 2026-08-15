@@ -238,16 +238,21 @@ mkdir -p "$post_start_dir/system/etc" "$post_start_dir/system/usr/local/bin" "$p
 printf 'GTNH_INSTALL_PATH=%q\n' "$post_start_dir/install" >"$post_start_dir/system/etc/gtnh.conf"
 printf '%s\n' '#!/usr/bin/env bash' \
   'if [[ "$*" == "command bq_admin default load" ]]; then printf "%s\n" "Reloaded default quest database" >>"$GTNH_TEST_LOG_FILE"; exit 1; fi' \
-  '[[ "$*" == "command list" ]]' >"$post_start_dir/system/usr/local/bin/gtnh"
+  'if [[ "$*" == "command list" ]]; then count=$(<"$GTNH_TEST_RCON_COUNTER"); count=$((count+1)); printf "%s\n" "$count" >"$GTNH_TEST_RCON_COUNTER"; ((count>=2)); exit; fi' \
+  'exit 1' >"$post_start_dir/system/usr/local/bin/gtnh"
 chmod 0755 "$post_start_dir/system/usr/local/bin/gtnh"
-export GTNH_SYSTEM_ROOT="$post_start_dir/system" GTNH_TEST_LOG_FILE="$post_start_dir/install/logs/latest.log" GTNH_POST_START_LOG_TIMEOUT=1
+export GTNH_SYSTEM_ROOT="$post_start_dir/system" GTNH_TEST_LOG_FILE="$post_start_dir/install/logs/latest.log" \
+  GTNH_TEST_RCON_COUNTER="$post_start_dir/rcon-counter" GTNH_POST_START_LOG_TIMEOUT=1 \
+  GTNH_POST_START_RCON_ATTEMPTS=2 GTNH_POST_START_RCON_RETRY_SECONDS=0
 : >"$GTNH_TEST_LOG_FILE"
+printf '0\n' >"$GTNH_TEST_RCON_COUNTER"
 log_check_resolved='[{"postStartChecks":[],"postStartLogChecks":[{"name":"quest reload","command":"bq_admin default load","logContains":"Reloaded default quest database"}]}]'
-assert_success "quest reload accepts a fresh log marker after an incomplete RCON response" mods_validate_post_start "$log_check_resolved" gtnh
+assert_success "quest reload accepts fresh log evidence and waits for RCON recovery" mods_validate_post_start "$log_check_resolved" gtnh
 printf '%s\n' '#!/usr/bin/env bash' '[[ "$*" == "command list" ]]' >"$post_start_dir/system/usr/local/bin/gtnh"
 chmod 0755 "$post_start_dir/system/usr/local/bin/gtnh"
 assert_failure "quest reload rejects a stale log marker" mods_validate_post_start "$log_check_resolved" gtnh
-unset GTNH_SYSTEM_ROOT GTNH_TEST_LOG_FILE GTNH_POST_START_LOG_TIMEOUT
+unset GTNH_SYSTEM_ROOT GTNH_TEST_LOG_FILE GTNH_TEST_RCON_COUNTER GTNH_POST_START_LOG_TIMEOUT \
+  GTNH_POST_START_RCON_ATTEMPTS GTNH_POST_START_RCON_RETRY_SECONDS
 rm -rf -- "$post_start_dir"
 
 config_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtnh-config-test.XXXXXX")"

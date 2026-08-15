@@ -213,7 +213,7 @@ mods_apply_update_migrations() {
 }
 
 mods_validate_post_start() {
-  local resolved="$1" service="$2" check output expected config_file helper log_file start_line deadline
+  local resolved="$1" service="$2" check output expected config_file helper log_file start_line deadline attempt rcon_ready
   [[ "${GTNH_TEST_MODE:-false}" == true ]] && return 0
   config_file="$(system_path "/etc/${service}.conf")"
   helper="$(system_path /usr/local/bin/gtnh)"
@@ -246,6 +246,14 @@ mods_validate_post_start() {
       log_error "post-start validation failed: $(jq -r '.name' <<<"$check") did not produce a fresh server log marker"
       return "$EX_TEMPFAIL"
     fi
-    GTNH_CONFIG_FILE="$config_file" "$helper" command list >/dev/null || return "$EX_TEMPFAIL"
+    rcon_ready=false
+    for ((attempt=1; attempt<=${GTNH_POST_START_RCON_ATTEMPTS:-6}; attempt++)); do
+      if GTNH_CONFIG_FILE="$config_file" "$helper" command list >/dev/null 2>&1; then rcon_ready=true; break; fi
+      sleep "${GTNH_POST_START_RCON_RETRY_SECONDS:-5}"
+    done
+    if [[ "$rcon_ready" != true ]]; then
+      log_error "post-start validation failed: $(jq -r '.name' <<<"$check") did not restore RCON responsiveness"
+      return "$EX_TEMPFAIL"
+    fi
   done < <(jq -c '.[] | .postStartLogChecks[]?' <<<"$resolved")
 }
