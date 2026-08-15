@@ -133,10 +133,52 @@ assert_success "six-mod catalogue validates" mod_catalogue_validate "$mod_catalo
 all_mods="$(mod_resolve "$mod_catalogue" 2.8.4 all)"
 assert_eq "6" "$(jq length <<<"$all_mods")" "all six mods resolve for GTNH 2.8.4"
 assert_eq "6" "$(jq '[.[].artifact.sha256]|unique|length' <<<"$all_mods")" "mod artifacts have unique pinned checksums"
+gtnl="$(jq -c '.[]|select(.id=="gt-not-leisure")' <<<"$all_mods")"
+assert_eq "0.2.6-hotfix1" "$(jq -r .version <<<"$gtnl")" "GT Not Leisure uses the compatible 0.2.6 hotfix"
+assert_eq "2" "$(jq '[.artifactEntries[]|select(contains("SteamAge"))]|length' <<<"$gtnl")" "GT Not Leisure pins both built-in quest lines"
+assert_eq "2" "$(jq '.[0].contains|length' <<<"$(jq -c '.postStartChecks' <<<"$gtnl")")" "GT Not Leisure has post-start checks for both quest lines"
 assert_failure "unknown mod fails closed" mod_resolve "$mod_catalogue" 2.8.4 does-not-exist
 UI_MODE=plain
 assert_eq "gtnh-rates,ae2-things" "$(printf '1,3\n' | ui_mod_selector "$mod_catalogue" 2.8.4 '')" "plain mod checklist maps numbered choices"
 assert_eq "gtnh-rates,ae2-things" "$(printf '\n' | ui_mod_selector "$mod_catalogue" 2.8.4 'gtnh-rates,ae2-things')" "update mod checklist keeps installed defaults"
+
+mod_validation_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtnh-mod-validation.XXXXXX")"
+mkdir -p "$mod_validation_dir/build/betterquesting/api/api" \
+  "$mod_validation_dir/build/assets/sciencenotleisure/quest/QuestLines/Tier075Superheat-GTNotLeisure75SteamAge==" \
+  "$mod_validation_dir/build/assets/sciencenotleisure/quest/QuestLines/Tier0999Supercri-GTNotLeisure99SteamAge=="
+printf api >"$mod_validation_dir/build/betterquesting/api/api/QuestingAPI.class"
+(cd "$mod_validation_dir/build" && zip -qr "$mod_validation_dir/BetterQuesting-3.7.15-GTNH.jar" betterquesting)
+mkdir -p "$mod_validation_dir/build/com/hfstudio/bqapi"
+printf api >"$mod_validation_dir/build/com/hfstudio/bqapi/BQApi.class"
+(cd "$mod_validation_dir/build" && zip -qr "$mod_validation_dir/bqapi-1.1.2.jar" com)
+printf order >"$mod_validation_dir/build/assets/sciencenotleisure/quest/QuestLinesOrder.txt"
+(cd "$mod_validation_dir/build" && zip -qr "$mod_validation_dir/sciencenotleisure-0.2.6-hotfix1.jar" assets)
+assert_success "GT Not Leisure quest resources validate" mods_validate_artifacts "[$gtnl]" "$mod_validation_dir"
+assert_success "BetterQuesting and separate quest API validate" mods_validate_runtime_requirements "[$gtnl]" "$mod_validation_dir"
+rm -f -- "$mod_validation_dir/BetterQuesting-3.7.15-GTNH.jar"
+assert_failure "missing BetterQuesting dependency fails closed" mods_validate_runtime_requirements "[$gtnl]" "$mod_validation_dir"
+
+mkdir -p "$mod_validation_dir/stage/config/GregTech" "$mod_validation_dir/stage/config/GTNotLeisure"
+printf old >"$mod_validation_dir/stage/config/GregTech/GregTech.lang"
+printf old >"$mod_validation_dir/stage/config/GTNotLeisure/GTNotLeisure.cfg"
+printf old >"$mod_validation_dir/stage/config/GTNotLeisure/main.cfg"
+printf keep >"$mod_validation_dir/stage/config/GTNotLeisure/keep.cfg"
+old_gtnl_state="$(jq -cn --argjson mod "$(jq '.version="0.1.9.1-280_rc2"' <<<"$gtnl")" '{mods:[$mod]}')"
+mods_apply_update_migrations "$old_gtnl_state" "[$gtnl]" "$mod_validation_dir/stage"
+if [[ ! -e "$mod_validation_dir/stage/config/GregTech/GregTech.lang" && ! -e "$mod_validation_dir/stage/config/GTNotLeisure/GTNotLeisure.cfg" && ! -e "$mod_validation_dir/stage/config/GTNotLeisure/main.cfg" && -e "$mod_validation_dir/stage/config/GTNotLeisure/keep.cfg" ]]; then
+  pass "GT Not Leisure update resets only documented generated files"
+else
+  fail "GT Not Leisure update resets only documented generated files"
+fi
+printf current >"$mod_validation_dir/stage/config/GTNotLeisure/GTNotLeisure.cfg"
+current_gtnl_state="$(jq -cn --argjson mod "$gtnl" '{mods:[$mod]}')"
+mods_apply_update_migrations "$current_gtnl_state" "[$gtnl]" "$mod_validation_dir/stage"
+if [[ -e "$mod_validation_dir/stage/config/GTNotLeisure/GTNotLeisure.cfg" ]]; then
+  pass "same-version reconciliation preserves GT Not Leisure configuration"
+else
+  fail "same-version reconciliation preserves GT Not Leisure configuration"
+fi
+rm -rf -- "$mod_validation_dir"
 
 config_dir="$(mktemp -d "${TMPDIR:-/tmp}/gtnh-config-test.XXXXXX")"
 printf 'alpha=one\nmanaged=old\nomega=three\n' >"$config_dir/server.properties"
@@ -174,5 +216,24 @@ journalctl() { [[ "$*" == *'2026-08-15 12:34:56 UTC'* ]] && printf 'Done (1.0s)!
 system_path() { printf '/bin/true\n'; }
 assert_success "startup health is scoped to current restart time" service_wait_healthy test-service 1 '2026-08-15 12:34:56 UTC'
 unset -f systemctl journalctl system_path
+# Restore the real lifecycle functions after the health-check fakes above.
+source "$TEST_ROOT/lib/lifecycle.sh"
+
+system_fixture="$(mktemp -d "${TMPDIR:-/tmp}/gtnh-system-test.XXXXXX")"
+GTNH_SYSTEM_ROOT="$system_fixture"
+GTNH_TEST_MODE=true
+GTNH_TEST_ACTION_LOG="$system_fixture/actions.log"
+runtime_config_write /opt/gtnh /var/backups/gtnh gtnh 8192 25575 secret '-Dfml.queryResult=confirm'
+service_install /opt/gtnh gtnh 8192
+assert_eq "FML_QUERY_ARGUMENT=-Dfml.queryResult=confirm" "$(grep '^FML_QUERY_ARGUMENT=' "$system_fixture/etc/gtnh.conf")" "update runtime enables one-start Forge confirmation"
+if grep -Fq '$FML_QUERY_ARGUMENT' "$system_fixture/etc/systemd/system/gtnh.service"; then
+  pass "service consumes optional Forge confirmation argument"
+else
+  fail "service consumes optional Forge confirmation argument"
+fi
+runtime_config_write /opt/gtnh /var/backups/gtnh gtnh 8192 25575 secret
+assert_eq "FML_QUERY_ARGUMENT=''" "$(grep '^FML_QUERY_ARGUMENT=' "$system_fixture/etc/gtnh.conf")" "healthy runtime clears Forge confirmation"
+unset GTNH_SYSTEM_ROOT GTNH_TEST_MODE GTNH_TEST_ACTION_LOG
+rm -rf -- "$system_fixture"
 
 finish_tests

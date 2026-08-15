@@ -47,9 +47,11 @@ Offline mode does not authenticate usernames. Another user who can reach the ser
 - AE2 Things 1.2.14
 - Twist Space Technology 0.7.16
 - 123Technology 2.1.8_5
-- GT Not Leisure 0.1.9.1-280_rc2
+- GT Not Leisure 0.2.6-hotfix1
 
-Artifacts and exact SHA-256 hashes are kept in `catalog/mods.json`. All six were tested together on GTNH 2.8.4; they loaded 295 total Forge mods and reached the ready state. Selected add-ons must also be installed on each client; the installer prints the exact client list.
+Artifacts and exact SHA-256 hashes are kept in `catalog/mods.json`. GT Not Leisure includes its two default quest lines in the mod JAR. The installer verifies those resources and GTNH 2.8.4's compatible BetterQuesting, automatically installs the separately pinned BetterQuestingAPI 1.1.2, and requires both quest chapters to appear in the live API before declaring startup healthy. During a GT Not Leisure version update, it also performs the author's required reset of `GregTech.lang` and the current or legacy GT Not Leisure configuration after creating the pre-update backup.
+
+All six mods were tested together on GTNH 2.8.4 and reached the ready state. Selected add-ons must also be installed on each client; the installer prints the exact client list.
 
 ## Administration
 
@@ -67,7 +69,7 @@ gtnh doctor
 
 `gtnh restore` refuses a backup whose sidecar SHA-256 does not match. Automatic pre-update backups retain the five newest automatic snapshots; manually named backups are not pruned.
 
-Updates are forward-only. The updater verifies everything in a staging directory, stops the service, makes a verified backup, carries the world, player/quest/map data, configuration, catalogue mods, and unmanaged mods forward, then starts the staged server. A failed ready-state check automatically switches back to the old installation.
+Updates are forward-only. The updater downloads and validates everything in a staging directory before downtime, stops the service, makes a verified backup, carries the world, player/quest/map data, configuration, catalogue mods, and unmanaged mods forward, then starts the staged server. Forge's missing-item confirmation is enabled only for that first post-update start and cleared after the server is healthy. A failed ready-state check automatically switches back to the old installation.
 
 ## Useful options
 

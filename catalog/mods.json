@@ -29,7 +29,44 @@
     {
       "id": "gt-not-leisure", "name": "GT Not Leisure", "repository": "https://github.com/ABKQPO/GT-Not-Leisure", "clientRequired": true,
       "dependencies": [], "conflicts": [],
-      "releases": [{"gtnh":"2.8.4","version":"0.1.9.1-280_rc2","asset":"sciencenotleisure-v0.1.9.1-280_rc2.jar","url":"https://github.com/ABKQPO/GT-Not-Leisure/releases/download/v0.1.9.1-280_rc2/sciencenotleisure-v0.1.9.1-280_rc2.jar","sha256":"461a84f6376cc952d63f6e9e5017cb3ab7abf79e45e72a7c1fcece9069614707","sizeBytes":17369981}]
+      "releases": [{
+        "gtnh":"2.8.4",
+        "version":"0.2.6-hotfix1",
+        "asset":"sciencenotleisure-0.2.6-hotfix1.jar",
+        "url":"https://github.com/ABKQPO/GT-Not-Leisure/releases/download/0.2.6-hotfix1/sciencenotleisure-0.2.6-hotfix1.jar",
+        "sha256":"9418f5318f48f779ec01d7734614292b322af0df74db8e1b18d83cffe36b94a8",
+        "sizeBytes":19001603,
+        "artifactEntries":[
+          "assets/sciencenotleisure/quest/QuestLinesOrder.txt",
+          "assets/sciencenotleisure/quest/QuestLines/Tier075Superheat-GTNotLeisure75SteamAge==/",
+          "assets/sciencenotleisure/quest/QuestLines/Tier0999Supercri-GTNotLeisure99SteamAge==/"
+        ],
+        "runtimeRequirements":[{
+          "name":"BetterQuesting 3.7.15-GTNH",
+          "jar":"BetterQuesting-3.7.15-GTNH.jar",
+          "entries":["betterquesting/api/api/QuestingAPI.class"]
+        },{
+          "name":"BetterQuestingAPI 1.1.2",
+          "jar":"bqapi-1.1.2.jar",
+          "clientRequired":true,
+          "entries":["com/hfstudio/bqapi/BQApi.class"],
+          "artifact":{
+            "url":"https://github.com/ABKQPO/BetterQuestingAPI/releases/download/1.1.2/bqapi-1.1.2.jar",
+            "sha256":"160f4c0b8ada5fccdbbfa53c1e6a98e17545c0a4955c5db1398ce21a40dab2c0",
+            "sizeBytes":108420
+          }
+        }],
+        "postStartChecks":[{
+          "name":"GT Not Leisure quest registration",
+          "command":"bqapi list",
+          "contains":["GTNotLeisure75SteamAge","GTNotLeisure99SteamAge"]
+        }],
+        "updateResetPaths":[
+          "config/GregTech/GregTech.lang",
+          "config/GTNotLeisure/GTNotLeisure.cfg",
+          "config/GTNotLeisure/main.cfg"
+        ]
+      }]
     }
   ]
 }

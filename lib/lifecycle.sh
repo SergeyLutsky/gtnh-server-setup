@@ -32,7 +32,7 @@ archive_extract_server() {
 }
 
 runtime_config_write() {
-  local install_path="$1" backup_path="$2" service="$3" heap="$4" rcon_port="$5" rcon_password="$6" env_file
+  local install_path="$1" backup_path="$2" service="$3" heap="$4" rcon_port="$5" rcon_password="$6" fml_query_argument="${7:-}" env_file
   env_file="$(system_path "/etc/${service}.conf")"
   install -d -m 0755 -- "$(dirname -- "$env_file")"
   umask 077
@@ -43,6 +43,7 @@ runtime_config_write() {
     printf 'GTNH_HEAP_MIB=%q\n' "$heap"
     printf 'GTNH_RCON_PORT=%q\n' "$rcon_port"
     printf 'GTNH_RCON_PASSWORD=%q\n' "$rcon_password"
+    printf 'FML_QUERY_ARGUMENT=%q\n' "$fml_query_argument"
   } >"$env_file"
   chmod 0600 "$env_file"
 }
@@ -79,7 +80,7 @@ User=root
 WorkingDirectory=$install_path
 EnvironmentFile=$(system_path "/etc/${service}.conf")
 ExecStartPre=$(system_path /usr/local/lib/gtnh-rcon-firewall) add
-ExecStart=/usr/bin/java -Xms${heap}M -Xmx${heap}M -Dfml.readTimeout=180 @java9args.txt -jar lwjgl3ify-forgePatches.jar nogui
+ExecStart=/usr/bin/java -Xms${heap}M -Xmx${heap}M -Dfml.readTimeout=180 \$FML_QUERY_ARGUMENT @java9args.txt -jar lwjgl3ify-forgePatches.jar nogui
 # A process may crash between the stop request and RCON connection. Prefixing
 # with '-' makes graceful RCON best-effort; systemd still terminates leftovers.
 ExecStop=-$(system_path /usr/local/bin/gtnh) command stop

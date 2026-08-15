@@ -240,7 +240,7 @@ first_network() {
 }
 
 execute_change() {
-  local version sha java_package java_version work archive stage parent old backup="" rcon_password state_json old_state final_mods_json selected_ids
+  local version sha java_package java_version work archive stage parent old backup="" rcon_password state_json old_state final_mods_json old_runtime_config_file=""
   final_mods_json="$RESOLVED_MODS_JSON"
   version="$(jq -r .version <<<"$RESOLVED_RELEASE_JSON")"; sha="$(jq -r .serverAsset.sha256 <<<"$RESOLVED_RELEASE_JSON")"
   java_package="$(jq -r .package <<<"$RESOLVED_JAVA_JSON")"
@@ -258,14 +258,6 @@ execute_change() {
     if [[ "$(jq -r .gtnh.version <<<"$old_state")" == "$version" && "$(jq -c '[.mods[].id]|sort' <<<"$old_state")" == "$(jq -c '[.[].id]|sort' <<<"$RESOLVED_MODS_JSON")" ]]; then
       log_info "Requested release and mod set already installed; configuration will be reconciled"
     fi
-    if [[ "${GTNH_TEST_MODE:-false}" != true ]]; then systemctl stop "$SERVICE_NAME" 2>/dev/null || true; fi
-    backup="$(backup_create "$INSTALL_PATH" "$BACKUP_PATH")" || die "$EX_IOERR" "pre-update backup failed"
-    backup_prune_auto "$BACKUP_PATH" 5
-    carry_forward_mutable "$INSTALL_PATH" "$stage"
-    selected_ids="$(jq '[.[].id]' <<<"$RESOLVED_MODS_JSON")"
-    while IFS= read -r old; do rm -f -- "$stage/mods/$(basename -- "$old")"; done < <(
-      jq -r --argjson ids "$selected_ids" '.mods[] as $m | select($ids | index($m.id)) | $m.artifact.name' <<<"$old_state"
-    )
     # On Update, an installed catalogue mod that is not selected remains
     # installed. Removal is deliberately not overloaded onto the update menu.
     final_mods_json="$(jq -cn --argjson old "$(jq .mods <<<"$old_state")" --argjson selected "$RESOLVED_MODS_JSON" '
@@ -275,9 +267,59 @@ execute_change() {
   fi
 
   mods_download "$RESOLVED_MODS_JSON" "$stage/mods" || { rm -rf -- "$stage"; die "$EX_DATAERR" "optional mod download or checksum verification failed"; }
+  mods_download_runtime_requirements "$RESOLVED_MODS_JSON" "$stage/mods" || { rm -rf -- "$stage"; die "$EX_DATAERR" "optional mod dependency download or checksum verification failed"; }
+  mods_validate_artifacts "$RESOLVED_MODS_JSON" "$stage/mods" || { rm -rf -- "$stage"; die "$EX_DATAERR" "optional mod content validation failed"; }
+  mods_validate_runtime_requirements "$RESOLVED_MODS_JSON" "$stage/mods" || { rm -rf -- "$stage"; die "$EX_DATAERR" "optional mod runtime requirements are missing or incompatible"; }
+  if [[ "$ACTION" == update ]]; then
+    if [[ "${GTNH_TEST_MODE:-false}" != true ]]; then systemctl stop "$SERVICE_NAME" 2>/dev/null || true; fi
+    backup="$(backup_create "$INSTALL_PATH" "$BACKUP_PATH")" || {
+      [[ "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
+      rm -rf -- "$stage"
+      die "$EX_IOERR" "pre-update backup failed"
+    }
+    backup_prune_auto "$BACKUP_PATH" 5
+    carry_forward_mutable "$INSTALL_PATH" "$stage" || {
+      [[ "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
+      rm -rf -- "$stage"
+      die "$EX_IOERR" "could not carry the existing world and configuration into staging"
+    }
+    while IFS= read -r old; do rm -f -- "$stage/mods/$(basename -- "$old")"; done < <(
+      jq -r --argjson selected "$RESOLVED_MODS_JSON" '
+        .mods[] as $old |
+        first($selected[] | select(.id==$old.id)) as $new |
+        select($new != null and $old.artifact.name != $new.artifact.name) |
+        $old.artifact.name
+      ' <<<"$old_state"
+    )
+    while IFS= read -r old; do rm -f -- "$stage/mods/$(basename -- "$old")"; done < <(
+      jq -r --argjson selected "$RESOLVED_MODS_JSON" '
+        .mods[] as $old |
+        first($selected[] | select(.id==$old.id)) as $new |
+        select($new != null) |
+        $old.runtimeRequirements[]? |
+        select(.artifact != null) |
+        .jar as $oldJar |
+        select(($new.runtimeRequirements | map(.jar) | index($oldJar)) == null) |
+        $oldJar
+      ' <<<"$old_state"
+    )
+    mods_apply_update_migrations "$old_state" "$RESOLVED_MODS_JSON" "$stage" || {
+      [[ "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
+      rm -rf -- "$stage"
+      die "$EX_DATAERR" "optional-mod update migration failed"
+    }
+  fi
   rcon_password="$(rcon_password_generate)"; log_register_secret "$rcon_password"
-  config_apply "$stage" "$MINECRAFT_PORT" "$WORLD_SEED" "$VIEW_DISTANCE" "$ADMIN_USERNAME" "$RCON_PORT" "$rcon_password" || { rm -rf -- "$stage"; die "$EX_DATAERR" "upstream configuration layout is incompatible"; }
-  config_validate "$stage" || die "$EX_DATAERR" "managed configuration validation failed"
+  config_apply "$stage" "$MINECRAFT_PORT" "$WORLD_SEED" "$VIEW_DISTANCE" "$ADMIN_USERNAME" "$RCON_PORT" "$rcon_password" || {
+    [[ "$ACTION" != update || "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
+    rm -rf -- "$stage"
+    die "$EX_DATAERR" "upstream configuration layout is incompatible"
+  }
+  config_validate "$stage" || {
+    [[ "$ACTION" != update || "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
+    rm -rf -- "$stage"
+    die "$EX_DATAERR" "managed configuration validation failed"
+  }
 
   old="${INSTALL_PATH}.rollback.$(date +%s)"
   [[ -e "$INSTALL_PATH" ]] && mv -- "$INSTALL_PATH" "$old"
@@ -285,27 +327,38 @@ execute_change() {
   state_json="$(state_build_json "$INSTALL_PATH" "$BACKUP_PATH" "$RESOLVED_RELEASE_JSON" "$RESOLVED_JAVA_JSON" "$java_version" "${ACTION}-$(date +%s)" complete complete "$([[ -n "$backup" ]] && echo true || echo false)")"
   state_json="$(jq --argjson mods "$final_mods_json" --arg service "${SERVICE_NAME}.service" --argjson port "$MINECRAFT_PORT" --argjson rcon "$RCON_PORT" --argjson heap "$HEAP_MIB" '.mods=$mods | .installation.serviceName=$service | .installation.minecraftPort=$port | .installation.rconPort=$rcon | .installation.heapMiB=$heap' <<<"$state_json")"
   state_write_atomic "$state_json" "$INSTALL_PATH/.gtnh-installer/state.json"
-  runtime_config_write "$INSTALL_PATH" "$BACKUP_PATH" "$SERVICE_NAME" "$HEAP_MIB" "$RCON_PORT" "$rcon_password"
+  if [[ "$ACTION" == update && -f "$(system_path "/etc/${SERVICE_NAME}.conf")" ]]; then
+    old_runtime_config_file="$work/previous-runtime.conf"
+    install -m 0600 -- "$(system_path "/etc/${SERVICE_NAME}.conf")" "$old_runtime_config_file"
+  fi
+  runtime_config_write "$INSTALL_PATH" "$BACKUP_PATH" "$SERVICE_NAME" "$HEAP_MIB" "$RCON_PORT" "$rcon_password" "$([[ "$ACTION" == update ]] && printf '%s' '-Dfml.queryResult=confirm')"
   helper_install "$SERVICE_NAME"; service_install "$INSTALL_PATH" "$SERVICE_NAME" "$HEAP_MIB"
   [[ "${ASSUME_YES}" == true ]] && firewall_apply "$MINECRAFT_PORT" "$(first_network)"
   local start_ok=true health_since
   health_since="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   service_start "$SERVICE_NAME" || start_ok=false
-  if [[ "$start_ok" != true ]] || ! service_wait_healthy "$SERVICE_NAME" 900 "$health_since"; then
+  if [[ "$start_ok" != true ]] || ! service_wait_healthy "$SERVICE_NAME" 900 "$health_since" || ! mods_validate_post_start "$final_mods_json" "$SERVICE_NAME"; then
     log_error "new server failed startup health check"
     if [[ -n "$backup" ]]; then
       [[ "${GTNH_TEST_MODE:-false}" == true ]] || systemctl stop "$SERVICE_NAME" || true
       mv -- "$INSTALL_PATH" "${INSTALL_PATH}.failed.$(date +%s)"; mv -- "$old" "$INSTALL_PATH"
+      if [[ -n "$old_runtime_config_file" ]]; then
+        install -m 0600 -- "$old_runtime_config_file" "$(system_path "/etc/${SERVICE_NAME}.conf")"
+      fi
       [[ "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME"
     fi
     die "$EX_TEMPFAIL" "server did not reach the positive startup marker; update was rolled back"
   fi
   gamerules_apply "$SERVICE_NAME"
+  # The update-only Forge confirmation is deliberately one-start-only. Future
+  # missing-mod prompts must not be accepted without another verified backup.
+  runtime_config_write "$INSTALL_PATH" "$BACKUP_PATH" "$SERVICE_NAME" "$HEAP_MIB" "$RCON_PORT" "$rcon_password"
   [[ -d "$old" ]] && rm -rf -- "$old"
   printf '\nGTNH %s is installed and healthy. Connect to this server on TCP %s.\n' "$version" "$MINECRAFT_PORT"
   printf 'Administration: gtnh status | gtnh logs | gtnh command "list" | gtnh backup\n'
   printf 'Minecraft EULA: https://www.minecraft.net/eula\n'
   jq -r '.[]|select(.clientRequired)|"Client mod required: \(.name) \(.version)"' <<<"$final_mods_json"
+  jq -r '.[]|.runtimeRequirements[]?|select(.clientRequired==true)|"Client dependency required: \(.name)"' <<<"$final_mods_json"
 }
 
 main() {
