@@ -4,6 +4,8 @@ param(
     [string]$PrismRoot,
     [string]$ServerAddress,
     [string]$ServerName = 'Private GTNH Server',
+    [ValidatePattern('^[A-Za-z0-9_]{1,16}$')]
+    [string]$PlayerName = 'LutchS',
     [string]$Mods = 'all',
     [ValidateRange(4096, 32768)]
     [int]$MemoryMB = 8192,
@@ -224,8 +226,9 @@ function Backup-File([string]$File, [string]$Instance, [string]$BackupRoot) {
     if (-not (Test-Path -LiteralPath $File -PathType Leaf)) { return }
     $relative = $File.Substring($Instance.TrimEnd('\').Length).TrimStart('\')
     $target = Join-Path $BackupRoot $relative
+    if (Test-Path -LiteralPath $target -PathType Leaf) { return }
     New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
-    Copy-Item -LiteralPath $File -Destination $target -Force
+    Copy-Item -LiteralPath $File -Destination $target
 }
 
 function Backup-Path([string]$Path, [string]$Instance, [string]$BackupRoot) {
@@ -392,6 +395,38 @@ function Set-PrismMemory([string]$Instance, [string]$BackupRoot) {
     [IO.File]::WriteAllText($path, $content, (New-Object Text.UTF8Encoding($false)))
 }
 
+function Set-PrismAccount([string]$Instance, [string]$BackupRoot) {
+    $prismDataRoot = if ($PrismRoot) {
+        [IO.Path]::GetFullPath($PrismRoot)
+    }
+    else {
+        Split-Path -Parent (Split-Path -Parent $Instance)
+    }
+    $accountsPath = Join-Path $prismDataRoot 'accounts.json'
+    if (-not (Test-Path -LiteralPath $accountsPath -PathType Leaf)) {
+        throw "Prism's accounts.json is missing. Add the Minecraft account '$PlayerName' in Prism Launcher, close Prism, and run this script again."
+    }
+
+    try { $accounts = Get-Content -LiteralPath $accountsPath -Raw | ConvertFrom-Json }
+    catch { throw "Prism's accounts.json is unreadable. Close Prism Launcher and verify its account configuration." }
+    $matches = @($accounts.accounts | Where-Object {
+        $_.profile -and ([string]$_.profile.name -ceq $PlayerName) -and $_.profile.id
+    })
+    if ($matches.Count -ne 1) {
+        $available = @($accounts.accounts | ForEach-Object { if ($_.profile.name) { [string]$_.profile.name } })
+        $suffix = if ($available.Count -gt 0) { " Available profiles: $($available -join ', ')." } else { '' }
+        throw "Prism must contain exactly one Minecraft profile named '$PlayerName'.$suffix Add or refresh that account, close Prism, and run this script again."
+    }
+
+    $path = Join-Path $Instance 'instance.cfg'
+    Backup-File $path $Instance $BackupRoot
+    $content = Get-Content -LiteralPath $path -Raw
+    $content = Set-IniValue $content 'UseAccountForInstance' 'true'
+    $content = Set-IniValue $content 'InstanceAccountId' ([string]$matches[0].profile.id)
+    [IO.File]::WriteAllText($path, $content, (New-Object Text.UTF8Encoding($false)))
+    return [string]$matches[0].profile.id
+}
+
 function Set-DefaultServer([string]$Instance, [string]$BackupRoot) {
     if ([string]::IsNullOrWhiteSpace($ServerAddress)) { return }
     if ($ServerAddress -match '[|\r\n]' -or $ServerName -match '[|\r\n]') {
@@ -411,6 +446,8 @@ function Set-DefaultServer([string]$Instance, [string]$BackupRoot) {
     $content = [regex]::Replace($content, '(?m)^\s*B:useURL=(?:true|false)\s*$', '    B:useURL=false')
     [IO.File]::WriteAllText($path, $content, (New-Object Text.UTF8Encoding($false)))
 }
+
+if ($env:GTNH_SETUP_TEST_ONLY -eq '1') { return }
 
 $instance = Get-PrismInstancePath
 Assert-GtnhInstance $instance
@@ -543,6 +580,7 @@ foreach ($pack in $resourcePacks) {
     $installedResourcePacks[$pack.id] = $pack.version
 }
 
+$profileId = Set-PrismAccount $instance $backupRoot
 if (-not $SkipMemoryConfiguration) { Set-PrismMemory $instance $backupRoot }
 Set-DefaultServer $instance $backupRoot
 
@@ -557,6 +595,8 @@ $state = [ordered]@{
     contentPacks = $installedContentPacks
     resourcePacks = $installedResourcePacks
     serverAddress = $ServerAddress
+    playerName = $PlayerName
+    prismProfileId = $profileId
     memoryMB = if ($SkipMemoryConfiguration) { $null } else { $MemoryMB }
 }
 [IO.File]::WriteAllText($statePath, ($state | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
@@ -568,6 +608,7 @@ else { Write-Host "Managed client add-ons: $(@($selected | ForEach-Object { $_.n
 if (-not $SkipClientExtras) { Write-Host 'Client extras: Extreme Sound Muffler: Legacy, Outlined Ores Modern' }
 if ($contentPacks.Count -gt 0) { Write-Host "Quest content: $(@($contentPacks | ForEach-Object { $_.Pack.name }) -join ', ')" }
 if ($ServerAddress) { Write-Host "Multiplayer server: $ServerName ($ServerAddress)" }
+Write-Host "Minecraft account: $PlayerName (pinned to this Prism instance)"
 if (-not $SkipMemoryConfiguration) { Write-Host "Prism memory: $MemoryMB MiB maximum" }
 if (Test-Path -LiteralPath $backupRoot -PathType Container) { Write-Host "Backups: $backupRoot" }
 Write-Host 'Restart Prism Launcher before starting the instance.'

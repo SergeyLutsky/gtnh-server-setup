@@ -10,19 +10,19 @@ Run as `root` on a dedicated Ubuntu 22.04, 24.04, or 26.04 x86-64 server:
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/SergeyLutsky/gtnh-server-setup/main/install.sh)"
 ```
 
-The menus ask Install or Update, GTNH release, administrator username, and optional mods. A plain numbered UI is used when Whiptail is unavailable. No optional mods are selected by default on a clean install.
+The menus ask Install or Update, GTNH release, administrator username (default `LutchS`), and optional mods. A plain numbered UI is used when Whiptail is unavailable. No optional mods are selected by default on a clean install.
 
 For a preview that writes nothing:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/SergeyLutsky/gtnh-server-setup/main/install.sh)" -- --dry-run --yes --admin YourMinecraftName
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/SergeyLutsky/gtnh-server-setup/main/install.sh)" -- --dry-run --yes
 ```
 
 For a repeatable non-interactive install:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/SergeyLutsky/gtnh-server-setup/main/install.sh)" -- \
-  --yes --action install --channel stable --admin YourMinecraftName --mods all
+  --yes --action install --channel stable --admin LutchS --mods all
 ```
 
 Always inspect scripts before running them as root. This project deliberately runs Minecraft as root, as requested; a vulnerable server or mod would therefore control the VM. Keep the VM dedicated and do not store unrelated credentials on it.
@@ -33,6 +33,7 @@ Always inspect scripts before running them as root. This project deliberately ru
 - Latest stable GTNH by default; stable and RC selection are supported when their checksum is pinned.
 - Java 21 when supported by the selected official pack; safe heap chosen from host RAM.
 - Offline mode, no whitelist, Hard, 20 players, view distance 12, no PvP, flight allowed.
+- `LutchS` is the default level-4 operator and ServerUtilities administrator; the running server grant is reapplied after every managed install or update.
 - Selected Minecraft port is LAN-scoped when UFW is already active. UFW is never enabled by this installer.
 - RCON uses a generated 48-character password, a root-only file, and an explicit non-loopback firewall rejection. It is never opened in UFW.
 - Worldgen caves/mineshafts/underground lakes and dirt/gravel pockets are disabled before the first world starts. Pollution, machine explosions, fire spread, and butterfly spawning are disabled.
@@ -59,10 +60,10 @@ All five offered mods were tested together on GTNH 2.8.4 and reached the ready s
 On Windows, install the official **GTNH 2.8.4 Java 17-25** instance in Prism Launcher first. Then open PowerShell in this repository and run:
 
 ```powershell
-.\setup-client.ps1 -ServerAddress "192.168.1.50:25565"
+.\setup-client.ps1 -ServerAddress "192.168.1.50:25565" -PlayerName "LutchS"
 ```
 
-The script auto-detects a standard Prism Launcher instance, verifies that it is GTNH 2.8.4, and configures it to match the server. Both native Prism instances using `.minecraft` and CurseForge-managed Prism instances using `minecraft` are supported. It installs all five pinned server add-ons, BetterQuestingAPI 1.1.2, Extreme Sound Muffler: Legacy 1.1.1, and the pinned Outlined Ores Modern resource pack. The resource pack is enabled without removing existing packs.
+The script auto-detects a standard Prism Launcher instance, verifies that it is GTNH 2.8.4, pins the instance to the Prism Minecraft profile named `LutchS`, and configures it to match the server. Add or refresh that Microsoft/Minecraft account in Prism first, then close Prism before running the script. Both native Prism instances using `.minecraft` and CurseForge-managed Prism instances using `minecraft` are supported. It installs all five pinned server add-ons, BetterQuestingAPI 1.1.2, Extreme Sound Muffler: Legacy 1.1.1, and the pinned Outlined Ores Modern resource pack. The resource pack is enabled without removing existing packs.
 
 Twist Stuff's pinned GTNH 2.8.4 quest snapshot is installed into BetterQuesting `DefaultQuests` using the same quest-line directories and order file as the server. GT Not Leisure's two quest chapters are embedded in its JAR and load through the bundled BetterQuesting plus the installed BetterQuestingAPI dependency; no duplicate external GTNL quest files are copied. When the Twist Space Technology or GT Not Leisure JAR changes, the script backs up and resets the author-required generated config and `GregTech.lang` files before the next launch.
 
@@ -74,10 +75,11 @@ If Prism is portable or more than one matching instance exists, identify it expl
 .\setup-client.ps1 `
   -InstancePath "D:\PrismLauncher\instances\GT New Horizons 2.8.4" `
   -ServerAddress "play.example.net:25565" `
+  -PlayerName "LutchS" `
   -MemoryMB 8192
 ```
 
-Use `-Mods none` for a server with no optional server add-ons, or pass a quoted comma-separated subset such as `-Mods "programmable-hatches,ae2-things"`. Omit `-ServerAddress` to leave the multiplayer list unchanged. Use `-SkipMemoryConfiguration` to preserve the instance's current Prism memory settings, `-SkipClientExtras` to omit Extreme Sound Muffler and Outlined Ores, or `-SkipQuestContent` to omit the external Twist Stuff quest snapshot.
+Use `-PlayerName` to select a different existing Prism Minecraft profile. Use `-Mods none` for a server with no optional server add-ons, or pass a quoted comma-separated subset such as `-Mods "programmable-hatches,ae2-things"`. Omit `-ServerAddress` to leave the multiplayer list unchanged. Use `-SkipMemoryConfiguration` to preserve the instance's current Prism memory settings, `-SkipClientExtras` to omit Extreme Sound Muffler and Outlined Ores, or `-SkipQuestContent` to omit the external Twist Stuff quest snapshot.
 
 ## Administration
 
@@ -111,6 +113,7 @@ shellcheck install.sh lib/*.sh bin/gtnh bin/gtnh-rcon-firewall
 python3 -m py_compile bin/gtnh-rcon.py
 bash tests/run.sh
 bash tests/dry-run.sh
+pwsh -NoProfile -File tests/client-account.ps1
 ```
 
 See `PROJECT-SPEC.md` for the contract and `IMPLEMENTATION-PLAN.md` for the staged validation plan.

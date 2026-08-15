@@ -7,6 +7,7 @@ readonly GTNH_SETUP_VERSION="1.0.0"
 readonly GTNH_SETUP_REPOSITORY="SergeyLutsky/gtnh-server-setup"
 readonly GTNH_SETUP_REF="${GTNH_SETUP_REF:-main}"
 readonly GTNH_SETUP_RAW_BASE="${GTNH_SETUP_RAW_BASE:-https://raw.githubusercontent.com/${GTNH_SETUP_REPOSITORY}/${GTNH_SETUP_REF}}"
+readonly GTNH_SETUP_DEFAULT_ADMIN="LutchS"
 
 declare -a GTNH_SETUP_MODULES=(
   core.sh
@@ -84,7 +85,7 @@ Options:
   --heap-mib MIB                Java heap in MiB (safe detected default)
   --view-distance CHUNKS        View distance (default: 12)
   --seed SEED                   Optional world seed
-  --admin USERNAME              Offline-mode operator name
+  --admin USERNAME              Offline-mode operator name (default: LutchS)
   --mods none|all|ID,ID         Optional catalogue mods (default: none)
   --release-metadata FILE       Use a release catalogue fixture
   --plain                       Force numbered text prompts
@@ -92,8 +93,8 @@ Options:
   --dry-run                     Detect and plan without changing the server
   --help                        Show this help
 
-With no options the installer presents menus. --yes is suitable for a
-non-interactive one-line install when --admin is also supplied.
+With no options the installer presents menus. --yes uses LutchS as the
+administrator unless --admin supplies another name.
 EOF
 }
 
@@ -327,7 +328,7 @@ execute_change() {
     rm -rf -- "$stage"
     die "$EX_DATAERR" "upstream configuration layout is incompatible"
   }
-  config_validate "$stage" || {
+  config_validate "$stage" "$ADMIN_USERNAME" || {
     [[ "$ACTION" != update || "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
     rm -rf -- "$stage"
     die "$EX_DATAERR" "managed configuration validation failed"
@@ -361,6 +362,7 @@ execute_change() {
     fi
     die "$EX_TEMPFAIL" "server did not reach the positive startup marker; update was rolled back"
   fi
+  operator_apply "$SERVICE_NAME" "$ADMIN_USERNAME"
   gamerules_apply "$SERVICE_NAME"
   # The update-only Forge confirmation is deliberately one-start-only. Future
   # missing-mod prompts must not be accepted without another verified backup.
@@ -406,8 +408,12 @@ main() {
   load_release_catalogue
   select_release
   if [[ -z "$ADMIN_USERNAME" ]]; then
-    if [[ "$ASSUME_YES" == true ]]; then die "$EX_USAGE" "--admin is required with --yes"; fi
-    read -r -p 'Minecraft administrator username: ' ADMIN_USERNAME
+    if [[ "$ASSUME_YES" == true ]]; then
+      ADMIN_USERNAME="$GTNH_SETUP_DEFAULT_ADMIN"
+    else
+      read -r -p "Minecraft administrator username [$GTNH_SETUP_DEFAULT_ADMIN]: " ADMIN_USERNAME
+      ADMIN_USERNAME="${ADMIN_USERNAME:-$GTNH_SETUP_DEFAULT_ADMIN}"
+    fi
     [[ "$ADMIN_USERNAME" =~ ^[A-Za-z0-9_]{1,16}$ ]] || die "$EX_USAGE" "invalid Minecraft username"
   fi
   [[ -n "$HEAP_MIB" ]] || HEAP_MIB="$(heap_recommended_mib "${DISCOVERY[ram_mib]}")" || die "$EX_DATAERR" "at least 8 GiB RAM is required"

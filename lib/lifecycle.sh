@@ -143,3 +143,14 @@ gamerules_apply() {
     log_warn 'playersSleepingPercentage gamerule is unavailable; ServerUtilities setting remains active'
   fi
 }
+
+operator_apply() {
+  local service="$1" username="$2" helper attempt
+  [[ "${GTNH_TEST_MODE:-false}" == true ]] && return 0
+  helper="$(system_path /usr/local/bin/gtnh)"
+  for ((attempt=1; attempt<=6; attempt++)); do
+    if "$helper" command "op $username" >/dev/null; then return 0; fi
+    sleep 5
+  done
+  return "$EX_TEMPFAIL"
+}

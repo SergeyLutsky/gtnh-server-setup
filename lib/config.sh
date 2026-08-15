@@ -122,9 +122,16 @@ config_apply() {
 }
 
 config_validate() {
-  local root="$1"
+  local root="$1" admin="${2:-}" uuid
+  if [[ -z "$admin" ]]; then
+    admin="$(jq -er 'if length == 1 then .[0].name else empty end' "$root/ops.json")" || return "$EX_DATAERR"
+  fi
+  [[ "$admin" =~ ^[A-Za-z0-9_]{1,16}$ ]] || return "$EX_DATAERR"
+  uuid="$(offline_uuid "$admin")" || return "$EX_DATAERR"
   grep -qx 'online-mode=false' "$root/server.properties" &&
   grep -qx 'pvp=false' "$root/server.properties" &&
   grep -qx 'eula=true' "$root/eula.txt" &&
-  jq -e 'length == 1 and .[0].level == 4' "$root/ops.json" >/dev/null
+  jq -e --arg name "$admin" --arg uuid "$uuid" \
+    'length == 1 and .[0].name == $name and .[0].uuid == $uuid and .[0].level == 4' \
+    "$root/ops.json" >/dev/null
 }
