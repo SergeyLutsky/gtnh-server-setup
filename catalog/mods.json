@@ -107,6 +107,19 @@
           "config/GTNotLeisure/main.cfg"
         ]
       }]
+    },
+    {
+      "id": "ore-excavation", "name": "Ore Excavation", "repository": "https://www.curseforge.com/minecraft/mc-mods/ore-excavation", "clientRequired": true,
+      "dependencies": [], "conflicts": [],
+      "releases": [{
+        "gtnh":"2.8.4",
+        "version":"1.1.134",
+        "asset":"OreExcavation-1.1.134.jar",
+        "url":"https://edge.forgecdn.net/files/2673/691/OreExcavation-1.1.134.jar",
+        "sha256":"1940b52395c167ab723f0fa12b679047435637c81b220ef2a115cec65ff5b69f",
+        "sizeBytes":179454,
+        "artifactEntries":["oreexcavation/core/OreExcavation.class"]
+      }]
     }
   ]
 }

@@ -16,6 +16,7 @@ try {
     $accountJson = @{
         formatVersion = 3
         accounts = @(@{
+            active = $true
             profile = @{
                 id = '0123456789abcdef0123456789abcdef'
                 name = 'LutchS'
@@ -34,6 +35,21 @@ try {
     if ($profileId -ne '0123456789abcdef0123456789abcdef') { throw 'Unexpected Prism profile ID.' }
     if ($content -notmatch '(?m)^UseAccountForInstance=true\r?$') { throw 'Prism account override was not enabled.' }
     if ($content -notmatch '(?m)^InstanceAccountId=0123456789abcdef0123456789abcdef\r?$') { throw 'Prism account ID was not written.' }
+
+    $accountsPath = Join-Path $temporaryRoot 'accounts.json'
+    $accounts = Get-Content -LiteralPath $accountsPath -Raw | ConvertFrom-Json
+    $accounts.accounts += [pscustomobject]@{
+        type = 'Offline'
+        active = $false
+        profile = [pscustomobject]@{
+            name = 'LutchS'
+            id = 'fedcba9876543210fedcba9876543210'
+        }
+    }
+    $accounts | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $accountsPath -Encoding UTF8
+    Set-PrismAccount $instance $backup | Out-Null
+    $content = Get-Content -LiteralPath (Join-Path $instance 'instance.cfg') -Raw
+    if ($content -notmatch '(?m)^InstanceAccountId=0123456789abcdef0123456789abcdef\r?$') { throw 'The single active duplicate-name profile was not selected.' }
     if ($original -ne "name=GTNH`r`n") { throw 'The original Prism instance configuration was not preserved.' }
 
     $PlayerName = 'DifferentPlayer'

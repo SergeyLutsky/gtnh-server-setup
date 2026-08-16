@@ -412,6 +412,13 @@ function Set-PrismAccount([string]$Instance, [string]$BackupRoot) {
     $matches = @($accounts.accounts | Where-Object {
         $_.profile -and ([string]$_.profile.name -ceq $PlayerName) -and $_.profile.id
     })
+    if ($matches.Count -gt 1) {
+        $activeMatches = @($matches | Where-Object {
+            $activeProperty = $_.PSObject.Properties['active']
+            $activeProperty -and $activeProperty.Value -eq $true
+        })
+        if ($activeMatches.Count -eq 1) { $matches = $activeMatches }
+    }
     if ($matches.Count -ne 1) {
         $available = @($accounts.accounts | ForEach-Object { if ($_.profile.name) { [string]$_.profile.name } })
         $suffix = if ($available.Count -gt 0) { " Available profiles: $($available -join ', ')." } else { '' }
