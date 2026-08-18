@@ -72,6 +72,7 @@ function Get-MinecraftPath([string]$Instance) {
 
 function Assert-GtnhInstance([string]$Path) {
     $instanceConfig = Join-Path $Path 'instance.cfg'
+    $componentFile = Join-Path $Path 'mmc-pack.json'
     $minecraftPath = Get-MinecraftPath $Path
     $versionFile = Join-Path $minecraftPath 'config\txloader\load\mainmenu\version.txt'
     if (-not (Test-Path -LiteralPath $instanceConfig -PathType Leaf)) {
@@ -83,6 +84,31 @@ function Assert-GtnhInstance([string]$Path) {
     $versionText = Get-Content -LiteralPath $versionFile -Raw
     if ($versionText -notmatch 'GTNH\s+2\.8\.4(?:\D|$)') {
         throw "This script requires GTNH $script:ExpectedVersion, but the instance reports: $($versionText.Trim())"
+    }
+
+    if (-not (Test-Path -LiteralPath $componentFile -PathType Leaf)) {
+        throw "The Prism component manifest is missing: $componentFile"
+    }
+    try { $components = Get-Content -LiteralPath $componentFile -Raw | ConvertFrom-Json }
+    catch { throw "The Prism component manifest is unreadable: $componentFile" }
+    $componentIds = @($components.components | ForEach-Object { [string]$_.uid })
+    $requiredComponents = @(
+        'org.lwjgl3',
+        'me.eigenraven.lwjgl3ify.forgepatches',
+        'me.eigenraven.lwjgl3ify.launchargs'
+    )
+    $missingComponents = @($requiredComponents | Where-Object { $componentIds -notcontains $_ })
+    $modernRuntimeMod = @(Get-ChildItem -LiteralPath (Join-Path $minecraftPath 'mods') -File -Filter 'lwjgl3ify-*.jar' -ErrorAction SilentlyContinue)
+    if ($missingComponents.Count -gt 0 -or $modernRuntimeMod.Count -ne 1) {
+        throw "This is the legacy Java 8/LWJGL2 GTNH instance. Import the official GTNH $script:ExpectedVersion Java 17-25 Prism archive, then run this script against that instance."
+    }
+
+    $instanceText = Get-Content -LiteralPath $instanceConfig -Raw
+    if ($instanceText -match '(?m)^OverrideJavaLocation=true\r?$') {
+        $versionMatch = [regex]::Match($instanceText, '(?m)^JavaVersion=(\d+)(?:\.|\r?$)')
+        if (-not $versionMatch.Success -or [int]$versionMatch.Groups[1].Value -lt 17) {
+            throw 'The Prism instance overrides Java with a legacy runtime. Select Java 17-25 for this instance before continuing.'
+        }
     }
 }
 
