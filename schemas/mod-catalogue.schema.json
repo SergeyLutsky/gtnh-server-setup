@@ -40,7 +40,7 @@
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "name": { "type": "string", "minLength": 1 },
-        "repository": { "type": "string", "format": "uri", "pattern": "^https://github.com/" },
+        "repository": { "type": "string", "format": "uri", "pattern": "^https://(github\\.com|www\\.curseforge\\.com)/" },
         "clientRequired": { "type": "boolean" },
         "dependencies": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
         "conflicts": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
@@ -54,7 +54,7 @@
               "gtnh": { "type": "string", "minLength": 1 },
               "version": { "type": "string", "minLength": 1 },
               "asset": { "type": "string", "minLength": 1 },
-              "url": { "type": "string", "format": "uri", "pattern": "^https://github.com/" },
+              "url": { "type": "string", "format": "uri", "pattern": "^https://(github\\.com|edge\\.forgecdn\\.net|mediafilez\\.forgecdn\\.net)/" },
               "sizeBytes": { "type": "integer", "minimum": 1 },
               "sha256": { "$ref": "#/$defs/sha256" },
               "artifactEntries": {

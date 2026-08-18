@@ -6,7 +6,8 @@
     { "id": "twist-space-technology", "patterns": ["TwistSpaceTechnology-*.jar"] },
     { "id": "123-technology", "patterns": ["OTHTechnology-*.jar"] },
     { "id": "gt-not-leisure", "patterns": ["sciencenotleisure-*.jar", "bqapi-*.jar"] },
-    { "id": "ore-excavation", "patterns": ["OreExcavation-*.jar"] }
+    { "id": "ore-excavation", "patterns": ["OreExcavation-*.jar"] },
+    { "id": "iron-furnaces", "patterns": ["ironfurnaces-*.jar"] }
   ],
   "clientMods": [
     {

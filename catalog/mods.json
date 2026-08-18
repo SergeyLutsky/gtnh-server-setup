@@ -120,6 +120,19 @@
         "sizeBytes":179454,
         "artifactEntries":["oreexcavation/core/OreExcavation.class"]
       }]
+    },
+    {
+      "id": "iron-furnaces", "name": "Iron Furnaces", "repository": "https://www.curseforge.com/minecraft/mc-mods/iron-furnaces", "clientRequired": true,
+      "dependencies": [], "conflicts": [],
+      "releases": [{
+        "gtnh":"2.8.4",
+        "version":"1.2.4",
+        "asset":"ironfurnaces-1.2.4R.jar",
+        "url":"https://edge.forgecdn.net/files/2394/877/ironfurnaces-1.2.4R.jar",
+        "sha256":"742ddcdaf415fe2343d8a04c0fd398dd31aa30beb64cbe40eb91a8ab9650a800",
+        "sizeBytes":118613,
+        "artifactEntries":["IronFurnaces.class"]
+      }]
     }
   ]
 }
