@@ -133,6 +133,19 @@
         "sizeBytes":118613,
         "artifactEntries":["IronFurnaces.class"]
       }]
+    },
+    {
+      "id": "not-enough-wands", "name": "Not Enough Wands", "repository": "https://www.curseforge.com/minecraft/mc-mods/not-enough-wands", "clientRequired": true,
+      "dependencies": [], "conflicts": [],
+      "releases": [{
+        "gtnh":"2.8.4",
+        "version":"1.2.3",
+        "asset":"notenoughwands-1.2.3.jar",
+        "url":"https://edge.forgecdn.net/files/2266/560/notenoughwands-1.2.3.jar",
+        "sha256":"4f628303c8131a48920b9a6efd3d4bd3464d3b2c6908b52ba81deb85db2468e6",
+        "sizeBytes":118706,
+        "artifactEntries":["romelo333/notenoughwands/NotEnoughWands.class","romelo333/notenoughwands/Config.class"]
+      }]
     }
   ]
 }

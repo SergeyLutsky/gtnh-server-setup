@@ -7,7 +7,8 @@
     { "id": "123-technology", "patterns": ["OTHTechnology-*.jar"] },
     { "id": "gt-not-leisure", "patterns": ["sciencenotleisure-*.jar", "bqapi-*.jar"] },
     { "id": "ore-excavation", "patterns": ["OreExcavation-*.jar"] },
-    { "id": "iron-furnaces", "patterns": ["ironfurnaces-*.jar"] }
+    { "id": "iron-furnaces", "patterns": ["ironfurnaces-*.jar"] },
+    { "id": "not-enough-wands", "patterns": ["notenoughwands-*.jar"] }
   ],
   "clientMods": [
     {

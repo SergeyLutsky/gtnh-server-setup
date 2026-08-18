@@ -231,6 +231,53 @@ mods_apply_update_migrations() {
   done < <(jq -c '.[]' <<<"$resolved")
 }
 
+mods_write_not_enough_wands_config() {
+  local root="$1" file="$1/config/notenoughwands.cfg" tmp wand availability loot
+  install -d -m 0755 -- "$root/config"
+  tmp="$(mktemp "${file}.XXXXXX")"
+  {
+    printf '%s\n' '# Managed by gtnh-server-setup: free wand use with normal chest loot enabled.' 'wands {'
+    while IFS=: read -r wand availability loot; do
+      printf '    I:item.%s_needsxp=0\n' "$wand"
+      printf '    I:item.%s_needsrf=0\n' "$wand"
+      printf '    I:item.%s_maxrf=0\n' "$wand"
+      printf '    I:item.%s_maxdurability=0\n' "$wand"
+      printf '    I:item.%s_availability=%s\n' "$wand" "$availability"
+      printf '    I:item.%s_lootRarity=%s\n' "$wand" "$loot"
+    done <<'EOF'
+AccelerationWand:2:2
+BuildingWand:2:3
+CapturingWand:2:3
+DisplacementWand:3:3
+IlluminationWand:3:6
+MovingWand:3:5
+ProtectionWand:2:1
+MasterProtectionWand:1:0
+SwappingWand:2:5
+TeleportationWand:3:6
+EOF
+    printf '%s\n' '}'
+  } >"$tmp"
+  chmod 0644 "$tmp"
+  mv -- "$tmp" "$file"
+}
+
+mods_apply_managed_configs() {
+  local resolved="$1" root="$2"
+  if jq -e 'any(.[]; .id=="not-enough-wands")' >/dev/null <<<"$resolved"; then
+    mods_write_not_enough_wands_config "$root"
+  fi
+}
+
+mods_validate_managed_configs() {
+  local resolved="$1" root="$2" file="$2/config/notenoughwands.cfg"
+  jq -e 'any(.[]; .id=="not-enough-wands")' >/dev/null <<<"$resolved" || return 0
+  [[ -f "$file" ]] || return "$EX_NOINPUT"
+  [[ "$(grep -Ec '^[[:space:]]+I:item\.[A-Za-z]+_(needsxp|needsrf|maxrf|maxdurability)=0$' "$file")" == 40 ]] || return "$EX_DATAERR"
+  [[ "$(grep -Ec '^[[:space:]]+I:item\.(Acceleration|Building|Capturing|Displacement|Illumination|Moving|Protection|Swapping|Teleportation)Wand_lootRarity=[1-9][0-9]*$' "$file")" == 9 ]] || return "$EX_DATAERR"
+  grep -qx '[[:space:]]*I:item\.MasterProtectionWand_lootRarity=0' "$file" || return "$EX_DATAERR"
+}
+
 mods_validate_post_start() {
   local resolved="$1" service="$2" check output expected command config_file helper log_file start_line deadline attempt rcon_ready check_ok
   [[ "${GTNH_TEST_MODE:-false}" == true ]] && return 0

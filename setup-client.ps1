@@ -480,6 +480,47 @@ function Set-DefaultServer([string]$Instance, [string]$BackupRoot) {
     [IO.File]::WriteAllText($path, $content, (New-Object Text.UTF8Encoding($false)))
 }
 
+function Get-NotEnoughWandsConfigText {
+    $wands = @(
+        @('AccelerationWand', 2, 2),
+        @('BuildingWand', 2, 3),
+        @('CapturingWand', 2, 3),
+        @('DisplacementWand', 3, 3),
+        @('IlluminationWand', 3, 6),
+        @('MovingWand', 3, 5),
+        @('ProtectionWand', 2, 1),
+        @('MasterProtectionWand', 1, 0),
+        @('SwappingWand', 2, 5),
+        @('TeleportationWand', 3, 6)
+    )
+    $lines = @(
+        '# Managed by gtnh-server-setup: free wand use with normal chest loot enabled.',
+        'wands {'
+    )
+    foreach ($wand in $wands) {
+        $name = $wand[0]
+        $lines += "    I:item.$($name)_needsxp=0"
+        $lines += "    I:item.$($name)_needsrf=0"
+        $lines += "    I:item.$($name)_maxrf=0"
+        $lines += "    I:item.$($name)_maxdurability=0"
+        $lines += "    I:item.$($name)_availability=$($wand[1])"
+        $lines += "    I:item.$($name)_lootRarity=$($wand[2])"
+    }
+    $text = (($lines + '}') -join "`n") + "`n"
+    return $text
+}
+
+function Set-ManagedModConfigurations($SelectedMods, [string]$Instance, [string]$BackupRoot) {
+    if ('not-enough-wands' -notin @($SelectedMods | ForEach-Object { $_.id })) { return }
+    $path = Join-Path (Get-MinecraftPath $Instance) 'config\notenoughwands.cfg'
+    $content = Get-NotEnoughWandsConfigText
+    if ((Test-Path -LiteralPath $path -PathType Leaf) -and
+        [IO.File]::ReadAllText($path) -eq $content) { return }
+    Backup-File $path $Instance $BackupRoot
+    New-Item -ItemType Directory -Path (Split-Path -Parent $path) -Force | Out-Null
+    [IO.File]::WriteAllText($path, $content, (New-Object Text.UTF8Encoding($false)))
+}
+
 if ($env:GTNH_SETUP_TEST_ONLY -eq '1') { return }
 
 $instance = Get-PrismInstancePath
@@ -577,6 +618,8 @@ foreach ($artifact in $artifacts) {
         Copy-Item -LiteralPath $downloads[$artifact.FileName] -Destination $target -Force
     }
 }
+
+Set-ManagedModConfigurations $selected $instance $backupRoot
 
 $installedContentPacks = [ordered]@{}
 foreach ($wrapped in $contentPacks) {

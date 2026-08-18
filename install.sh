@@ -328,10 +328,20 @@ execute_change() {
     rm -rf -- "$stage"
     die "$EX_DATAERR" "upstream configuration layout is incompatible"
   }
+  mods_apply_managed_configs "$final_mods_json" "$stage" || {
+    [[ "$ACTION" != update || "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
+    rm -rf -- "$stage"
+    die "$EX_DATAERR" "optional-mod configuration failed"
+  }
   config_validate "$stage" "$ADMIN_USERNAME" || {
     [[ "$ACTION" != update || "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
     rm -rf -- "$stage"
     die "$EX_DATAERR" "managed configuration validation failed"
+  }
+  mods_validate_managed_configs "$final_mods_json" "$stage" || {
+    [[ "$ACTION" != update || "${GTNH_TEST_MODE:-false}" == true ]] || systemctl start "$SERVICE_NAME" || true
+    rm -rf -- "$stage"
+    die "$EX_DATAERR" "optional-mod configuration validation failed"
   }
 
   old="${INSTALL_PATH}.rollback.$(date +%s)"

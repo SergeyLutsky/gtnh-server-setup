@@ -50,12 +50,13 @@ Offline mode does not authenticate usernames. Another user who can reach the ser
 - GT Not Leisure 0.2.6-hotfix1
 - Ore Excavation 1.1.134
 - Iron Furnaces 1.2.4
+- Not Enough Wands 1.2.3
 
 Artifacts and exact SHA-256 hashes are kept in `catalog/mods.json`. Selecting Twist Space Technology automatically installs the pinned GTNH 2.8.4 Twist Stuff quest snapshot into BetterQuesting's `DefaultQuests`, verifies BetterQuesting's automatic startup load without resetting player progress, and fails or rolls back if the load is not confirmed. The installer deliberately does not follow Twist Stuff's `main` branch because it now contains GTNH 2.9 quest changes.
 
 GT Not Leisure includes its two default quest lines in the mod JAR. The installer verifies those resources and GTNH 2.8.4's compatible BetterQuesting, automatically installs the separately pinned BetterQuestingAPI 1.1.2, and requires both quest chapters to appear in the live API before declaring startup healthy. After creating the pre-update backup, version updates also perform each author's required generated-file resets: `GregTech.lang` plus the current or legacy GT Not Leisure configuration for GT Not Leisure, and `GregTech.lang` plus `TwistSpaceTechnology.cfg` for Twist Space Technology. Same-version reconciliation preserves these files.
 
-The original five offered mods were tested together on GTNH 2.8.4 and reached the ready state. Ore Excavation 1.1.134 and Iron Furnaces 1.2.4 are pinned from their Minecraft 1.7.10 CurseForge releases for both server and client installation. GTNH Rates is retired: it is never offered for new installations, and the next managed update removes its previously installed JAR after creating the verified backup. Selected add-ons must also be installed on each client; the installer prints the exact client list.
+The original five offered mods were tested together on GTNH 2.8.4 and reached the ready state. Ore Excavation 1.1.134, Iron Furnaces 1.2.4, and Not Enough Wands 1.2.3 are pinned from their Minecraft 1.7.10 CurseForge releases for both server and client installation. When Not Enough Wands is selected, the server and Prism client receive the same managed configuration: wands consume no XP, RF, or durability, while the mod's normal chest loot remains enabled. The creative-only master protection wand remains excluded from chest loot. GTNH Rates is retired: it is never offered for new installations, and the next managed update removes its previously installed JAR after creating the verified backup. Selected add-ons must also be installed on each client; the installer prints the exact client list.
 
 ## Configure an existing Prism Launcher client
 
@@ -65,7 +66,7 @@ On Windows, install the official **GTNH 2.8.4 Java 17-25** instance in Prism Lau
 .\setup-client.ps1 -ServerAddress "192.168.1.50:25565" -PlayerName "LutchS"
 ```
 
-The script auto-detects a standard Prism Launcher instance, verifies that it is GTNH 2.8.4, pins the instance to the Prism Minecraft profile named `LutchS`, and configures it to match the server. Add or refresh that Microsoft/Minecraft account in Prism first, then close Prism before running the script. Both native Prism instances using `.minecraft` and CurseForge-managed Prism instances using `minecraft` are supported. It installs all seven pinned server add-ons, BetterQuestingAPI 1.1.2, Extreme Sound Muffler: Legacy 1.1.1, and the pinned Outlined Ores Modern resource pack. The resource pack is enabled without removing existing packs.
+The script auto-detects a standard Prism Launcher instance, verifies that it is GTNH 2.8.4, pins the instance to the Prism Minecraft profile named `LutchS`, and configures it to match the server. Add or refresh that Microsoft/Minecraft account in Prism first, then close Prism before running the script. Both native Prism instances using `.minecraft` and CurseForge-managed Prism instances using `minecraft` are supported. It installs all eight pinned server add-ons, their managed configuration, BetterQuestingAPI 1.1.2, Extreme Sound Muffler: Legacy 1.1.1, and the pinned Outlined Ores Modern resource pack. The resource pack is enabled without removing existing packs.
 
 Twist Stuff's pinned GTNH 2.8.4 quest snapshot is installed into BetterQuesting `DefaultQuests` using the same quest-line directories and order file as the server. GT Not Leisure's two quest chapters are embedded in its JAR and load through the bundled BetterQuesting plus the installed BetterQuestingAPI dependency; no duplicate external GTNL quest files are copied. When the Twist Space Technology or GT Not Leisure JAR changes, the script backs up and resets the author-required generated config and `GregTech.lang` files before the next launch.
 

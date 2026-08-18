@@ -49,6 +49,17 @@ try {
 
     [IO.File]::WriteAllText((Join-Path $instance 'instance.cfg'), "OverrideJavaLocation=true`r`nJavaVersion=21.0.3`r`n", $utf8)
     Assert-GtnhInstance $instance
+
+    $selected = @([pscustomobject]@{ id = 'not-enough-wands' })
+    $backupRoot = Join-Path $instance '.gtnh-client-backups\test'
+    Set-ManagedModConfigurations $selected $instance $backupRoot
+    $wandConfig = Get-Content -LiteralPath (Join-Path $minecraft 'config\notenoughwands.cfg')
+    if (@($wandConfig | Where-Object { $_ -match '_(needsxp|needsrf|maxrf|maxdurability)=0$' }).Count -ne 40) {
+        throw 'Not Enough Wands client configuration does not disable all usage costs.'
+    }
+    if (@($wandConfig | Where-Object { $_ -match '^\s+I:item\.(?!MasterProtection)[A-Za-z]+Wand_lootRarity=[1-9][0-9]*$' }).Count -ne 9) {
+        throw 'Not Enough Wands client configuration does not retain normal chest loot.'
+    }
     Write-Host 'Client modern Java guard test passed.'
 }
 finally {
