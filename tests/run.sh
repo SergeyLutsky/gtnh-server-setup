@@ -178,6 +178,8 @@ assert_eq '["ironfurnaces-*.jar"]' "$(jq -c '.serverModFilePatterns[]|select(.id
 assert_eq "1.2.3" "$(jq -r .version <<<"$not_enough_wands")" "Not Enough Wands uses the latest Minecraft 1.7.10 release"
 assert_eq "notenoughwands-1.2.3.jar" "$(jq -r .artifact.name <<<"$not_enough_wands")" "Not Enough Wands resolves the pinned server and client artifact"
 assert_eq '["notenoughwands-*.jar"]' "$(jq -c '.serverModFilePatterns[]|select(.id=="not-enough-wands")|.patterns' "$TEST_ROOT/catalog/client-addons.json")" "client setup replaces other Not Enough Wands versions"
+assert_eq "1.0.0" "$(jq -r '.clientMods[]|select(.id=="thaumcraft-research-solver")|.version' "$TEST_ROOT/catalog/client-addons.json")" "Thaumcraft Research Solver uses the stable GTNH 2.8.4 release"
+assert_eq "07e606336b68a7968e98532c211ac94e0b73c312e0bebe48a3cbd5c18f610bb4" "$(jq -r '.clientMods[]|select(.id=="thaumcraft-research-solver")|.artifact.sha256' "$TEST_ROOT/catalog/client-addons.json")" "Thaumcraft Research Solver artifact is checksum-pinned"
 malformed_content_catalogue="$(jq '.mods[] |= if .id=="twist-space-technology" then .releases[0].contentPacks[0].target="../../outside" else . end' <<<"$mod_catalogue")"
 assert_failure "unsafe quest content target fails catalogue validation" mod_catalogue_validate "$malformed_content_catalogue"
 malformed_retired_catalogue="$(jq '.retiredMods[0].artifacts=["../gtnhrates.jar"]' <<<"$mod_catalogue")"

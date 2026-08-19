@@ -681,7 +681,11 @@ Write-Host ''
 Write-Host "GTNH $script:ExpectedVersion client is configured: $instance" -ForegroundColor Green
 if ($selected.Count -eq 0) { Write-Host 'Managed client add-ons: none' }
 else { Write-Host "Managed client add-ons: $(@($selected | ForEach-Object { $_.name }) -join ', ')" }
-if (-not $SkipClientExtras) { Write-Host 'Client extras: Extreme Sound Muffler: Legacy, Outlined Ores Modern' }
+if (-not $SkipClientExtras) {
+    $clientExtraNames = @($clientCatalogue.clientMods | Where-Object { $_.gtnh -eq $script:ExpectedVersion } | ForEach-Object { $_.name })
+    $clientExtraNames += @($resourcePacks | ForEach-Object { $_.name })
+    Write-Host "Client extras: $($clientExtraNames -join ', ')"
+}
 if ($contentPacks.Count -gt 0) { Write-Host "Quest content: $(@($contentPacks | ForEach-Object { $_.Pack.name }) -join ', ')" }
 if ($ServerAddress) { Write-Host "Multiplayer server: $ServerName ($ServerAddress)" }
 Write-Host "Minecraft account: $PlayerName (pinned to this Prism instance)"

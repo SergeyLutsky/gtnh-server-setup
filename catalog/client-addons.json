@@ -22,6 +22,18 @@
         "sha256": "065f21b2b70cc705c49beb4bc45a9ba2230481906e12a37f93727a351495a2b5",
         "sizeBytes": 399795
       }
+    },
+    {
+      "id": "thaumcraft-research-solver",
+      "name": "Thaumcraft Research Solver",
+      "version": "1.0.0",
+      "gtnh": "2.8.4",
+      "artifact": {
+        "name": "tcresearchsolver-v1.0.0.jar",
+        "url": "https://github.com/egor-muindor/thaumcraft-research-solver/releases/download/v1.0.0/tcresearchsolver-v1.0.0.jar",
+        "sha256": "07e606336b68a7968e98532c211ac94e0b73c312e0bebe48a3cbd5c18f610bb4",
+        "sizeBytes": 189552
+      }
     }
   ],
   "resourcePacks": [
