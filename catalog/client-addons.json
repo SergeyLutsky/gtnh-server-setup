@@ -34,6 +34,18 @@
         "sha256": "07e606336b68a7968e98532c211ac94e0b73c312e0bebe48a3cbd5c18f610bb4",
         "sizeBytes": 189552
       }
+    },
+    {
+      "id": "flight-inertia-toggle",
+      "name": "Flight Inertia Toggle",
+      "version": "1.0.0",
+      "gtnh": "2.8.4",
+      "artifact": {
+        "name": "flightinertiatoggle-1.0.0.jar",
+        "url": "https://raw.githubusercontent.com/SergeyLutsky/gtnh-server-setup/main/artifacts/flightinertiatoggle-1.0.0.jar",
+        "sha256": "9ca74e704a749a01a6b5f3edd3ea4ddb9910ce8cceea3bbc21794e0368794550",
+        "sizeBytes": 7739
+      }
     }
   ],
   "resourcePacks": [

@@ -58,6 +58,8 @@ GT Not Leisure includes its two default quest lines in the mod JAR. The installe
 
 The original five offered mods were tested together on GTNH 2.8.4 and reached the ready state. Ore Excavation 1.1.134, Iron Furnaces 1.2.4, and Not Enough Wands 1.2.3 are pinned from their Minecraft 1.7.10 CurseForge releases for both server and client installation. When Not Enough Wands is selected, the server and Prism client receive the same managed configuration: wands consume no XP, RF, or durability, while the mod's normal chest loot remains enabled. The creative-only master protection wand remains excluded from chest loot. GTNH Rates is retired: it is never offered for new installations, and the next managed update removes its previously installed JAR after creating the verified backup. Selected add-ons must also be installed on each client; the installer prints the exact client list.
 
+The managed Prism setup also installs the client-only Flight Inertia Toggle. Press `F8` while playing to enable or disable flight inertia; the key is rebindable in Controls and the selected state persists between launches. Its source is under `mod-src/flight-inertia-toggle`.
+
 ## Configure an existing Prism Launcher client
 
 On Windows, install the official **GTNH 2.8.4 Java 17-25** instance in Prism Launcher first. Then open PowerShell in this repository and run:

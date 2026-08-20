@@ -180,6 +180,8 @@ assert_eq "notenoughwands-1.2.3.jar" "$(jq -r .artifact.name <<<"$not_enough_wan
 assert_eq '["notenoughwands-*.jar"]' "$(jq -c '.serverModFilePatterns[]|select(.id=="not-enough-wands")|.patterns' "$TEST_ROOT/catalog/client-addons.json")" "client setup replaces other Not Enough Wands versions"
 assert_eq "1.0.0" "$(jq -r '.clientMods[]|select(.id=="thaumcraft-research-solver")|.version' "$TEST_ROOT/catalog/client-addons.json")" "Thaumcraft Research Solver uses the stable GTNH 2.8.4 release"
 assert_eq "07e606336b68a7968e98532c211ac94e0b73c312e0bebe48a3cbd5c18f610bb4" "$(jq -r '.clientMods[]|select(.id=="thaumcraft-research-solver")|.artifact.sha256' "$TEST_ROOT/catalog/client-addons.json")" "Thaumcraft Research Solver artifact is checksum-pinned"
+assert_eq "1.0.0" "$(jq -r '.clientMods[]|select(.id=="flight-inertia-toggle")|.version' "$TEST_ROOT/catalog/client-addons.json")" "Flight Inertia Toggle uses the GTNH 2.8.4 release"
+assert_eq "9ca74e704a749a01a6b5f3edd3ea4ddb9910ce8cceea3bbc21794e0368794550" "$(jq -r '.clientMods[]|select(.id=="flight-inertia-toggle")|.artifact.sha256' "$TEST_ROOT/catalog/client-addons.json")" "Flight Inertia Toggle artifact is checksum-pinned"
 malformed_content_catalogue="$(jq '.mods[] |= if .id=="twist-space-technology" then .releases[0].contentPacks[0].target="../../outside" else . end' <<<"$mod_catalogue")"
 assert_failure "unsafe quest content target fails catalogue validation" mod_catalogue_validate "$malformed_content_catalogue"
 malformed_retired_catalogue="$(jq '.retiredMods[0].artifacts=["../gtnhrates.jar"]' <<<"$mod_catalogue")"

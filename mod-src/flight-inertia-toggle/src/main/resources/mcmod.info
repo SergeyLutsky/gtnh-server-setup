@@ -1,0 +1,17 @@
+{
+  "modListVersion": 2,
+  "modList": [{
+    "modid": "${modId}",
+    "name": "${modName}",
+    "description": "Adds a persistent keybind for enabling or disabling flight inertia.",
+    "version": "${modVersion}",
+    "mcversion": "${minecraftVersion}",
+    "url": "https://github.com/SergeyLutsky/gtnh-server-setup",
+    "authorList": ["SergeyLutsky"],
+    "credits": "Built for GT New Horizons 2.8.4",
+    "requiredMods": [],
+    "dependencies": [],
+    "dependants": [],
+    "useDependencyInformation": false
+  }]
+}
